@@ -42,7 +42,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAuthenticated())) {
@@ -50,6 +50,11 @@ export async function DELETE(
   }
 
   const { id } = await context.params;
+  const url = new URL(request.url);
+  const mode = url.searchParams.get("mode") || "move";
+  const targetProjectId =
+    url.searchParams.get("targetProjectId")?.trim() || "default";
+
   const db = await ensureDbReady();
   const rows = await db.select().from(projects).where(eq(projects.id, id));
   const project = rows[0];
@@ -64,11 +69,15 @@ export async function DELETE(
     );
   }
 
-  // Safely relocate project notes to default project
-  await db
-    .update(notes)
-    .set({ projectId: "default", updatedAt: Date.now() })
-    .where(eq(notes.projectId, id));
+  if (mode === "delete_all") {
+    await db.delete(notes).where(eq(notes.projectId, id));
+  } else {
+    const safeTargetId = targetProjectId === id ? "default" : targetProjectId;
+    await db
+      .update(notes)
+      .set({ projectId: safeTargetId, updatedAt: Date.now() })
+      .where(eq(notes.projectId, id));
+  }
 
   await db.delete(projects).where(eq(projects.id, id));
   return NextResponse.json({ ok: true });

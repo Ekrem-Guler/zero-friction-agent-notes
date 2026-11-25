@@ -44,6 +44,7 @@ import type {
 import { CaptureBar } from "./CaptureBar";
 import { SettingsModal } from "./SettingsModal";
 import { PinLockScreen } from "./PinLockScreen";
+import { ConfirmDialog, type DeleteDialogState } from "./ConfirmDialog";
 
 interface NotesWorkspaceProps {
   initialAuthenticated: boolean;
@@ -97,6 +98,9 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [toastError, setToastError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(
+    null
+  );
 
   const [addingProject, setAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -346,14 +350,22 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     }
   }
 
-  async function handleDeleteProject(projectId: string) {
+  async function handleDeleteProject(
+    projectId: string,
+    mode: "move" | "delete_all",
+    targetProjectId?: string
+  ) {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
+      const qs = new URLSearchParams({ mode });
+      if (targetProjectId) qs.set("targetProjectId", targetProjectId);
+      const res = await fetch(`/api/projects/${projectId}?${qs.toString()}`, {
         method: "DELETE",
       });
       if (!res.ok) return;
       if (activeProjectId === projectId) {
-        setActiveProjectId("default");
+        setActiveProjectId(
+          mode === "move" && targetProjectId ? targetProjectId : "default"
+        );
         setFocusedNoteId(null);
       }
       await fetchBootstrap();
@@ -613,7 +625,15 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
               </button>
               <button
                 type="button"
-                onClick={() => void handleDeleteNote(note.id)}
+                onClick={() => {
+                  setOpenMenuNoteId(null);
+                  setDeleteDialog({
+                    kind: "note",
+                    noteId: note.id,
+                    title: note.title || note.rawText,
+                    childCount: childCountsByNoteId[note.id] || 0,
+                  });
+                }}
                 className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -760,7 +780,15 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          void handleDeleteProject(prj.id);
+                          const totalInProject = notes.filter(
+                            (n) => (n.projectId || "default") === prj.id
+                          ).length;
+                          setDeleteDialog({
+                            kind: "project",
+                            projectId: prj.id,
+                            name: prj.name,
+                            totalNotesCount: totalInProject,
+                          });
                         }}
                         title="Projeyi Sil"
                         className="hidden rounded p-0.5 text-zinc-400 hover:text-rose-600 group-hover:inline-flex"
@@ -880,7 +908,15 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          void handleDeleteCustomSpace(sp.id);
+                          const spaceNoteCount = notes.filter(
+                            (n) => n.spaceId === sp.id
+                          ).length;
+                          setDeleteDialog({
+                            kind: "space",
+                            spaceId: sp.id,
+                            name: sp.name,
+                            noteCount: spaceNoteCount,
+                          });
                         }}
                         title="Başlığı Sil"
                         className="hidden rounded p-0.5 text-zinc-400 hover:text-rose-600 group-hover:inline-flex"
@@ -1857,6 +1893,21 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             setSettings(updated);
             setSettingsOpen(false);
           }}
+        />
+      )}
+
+      {deleteDialog && (
+        <ConfirmDialog
+          dialog={deleteDialog}
+          otherProjects={
+            deleteDialog.kind === "project"
+              ? projects.filter((p) => p.id !== deleteDialog.projectId)
+              : projects
+          }
+          onClose={() => setDeleteDialog(null)}
+          onConfirmNoteDelete={handleDeleteNote}
+          onConfirmSpaceDelete={handleDeleteCustomSpace}
+          onConfirmProjectDelete={handleDeleteProject}
         />
       )}
     </div>
