@@ -12,6 +12,8 @@ interface CaptureBarProps {
   activeProjectName: string;
   spaces: ClientSpace[];
   activeSpaceId: string;
+  parentNoteId?: string | null;
+  parentNoteTitle?: string | null;
   onNoteCreated: (note: ClientNote) => void;
   onError: (msg: string) => void;
 }
@@ -39,6 +41,8 @@ export function CaptureBar({
   activeProjectName,
   spaces,
   activeSpaceId,
+  parentNoteId = null,
+  parentNoteTitle = null,
   onNoteCreated,
   onError,
 }: CaptureBarProps) {
@@ -62,10 +66,15 @@ export function CaptureBar({
   const discardVoiceRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeProjectRef = useRef(activeProjectId);
+  const parentNoteIdRef = useRef(parentNoteId);
 
   useEffect(() => {
     activeProjectRef.current = activeProjectId;
   }, [activeProjectId]);
+
+  useEffect(() => {
+    parentNoteIdRef.current = parentNoteId;
+  }, [parentNoteId]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -107,6 +116,7 @@ export function CaptureBar({
         body: JSON.stringify({
           text: trimmed,
           projectId: activeProjectId,
+          parentId: parentNoteId || undefined,
           useAi,
           preferredSpaceId: useAi ? undefined : effectiveRawSpaceId,
         }),
@@ -219,6 +229,9 @@ export function CaptureBar({
       const formData = new FormData();
       formData.append("audio", blob, `voice-note.${ext}`);
       formData.append("projectId", activeProjectRef.current);
+      if (parentNoteIdRef.current) {
+        formData.append("parentId", parentNoteIdRef.current);
+      }
 
       const res = await fetch("/api/notes/voice", {
         method: "POST",
@@ -296,7 +309,11 @@ export function CaptureBar({
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleTextareaKeyDown}
-            placeholder={`${activeProjectName} için bir not, araç adı veya görev yazın...`}
+            placeholder={
+              parentNoteTitle
+                ? `"${parentNoteTitle}" altına alt not veya yorum ekleyin...`
+                : `${activeProjectName} için bir not, araç adı veya görev yazın...`
+            }
             className="w-full resize-none bg-transparent py-1 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-500 focus:outline-none"
           />
 

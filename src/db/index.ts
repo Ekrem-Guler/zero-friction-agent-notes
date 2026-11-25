@@ -111,6 +111,7 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL DEFAULT 'owner',
           project_id TEXT NOT NULL DEFAULT 'default',
+          parent_id TEXT,
           space_id TEXT NOT NULL,
           raw_text TEXT NOT NULL,
           input_type TEXT NOT NULL DEFAULT 'text',
@@ -149,7 +150,7 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
         );
       `);
 
-      // Safe migration for existing local.db without project_id
+      // Safe migration for existing local.db without project_id / parent_id
       try {
         await client.execute(
           `ALTER TABLE notes ADD COLUMN project_id TEXT NOT NULL DEFAULT 'default'`
@@ -157,8 +158,16 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
       } catch {
         // Column already exists
       }
+      try {
+        await client.execute(`ALTER TABLE notes ADD COLUMN parent_id TEXT`);
+      } catch {
+        // Column already exists
+      }
       await client.execute(
         `CREATE INDEX IF NOT EXISTS idx_notes_project_created ON notes (project_id, created_at DESC)`
+      );
+      await client.execute(
+        `CREATE INDEX IF NOT EXISTS idx_notes_parent_created ON notes (parent_id, created_at ASC)`
       );
 
       const existingProjects = await db

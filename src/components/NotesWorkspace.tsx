@@ -29,6 +29,9 @@ import {
   MoreHorizontal,
   Layers,
   FileText,
+  MessageSquare,
+  CornerDownRight,
+  ChevronRight,
 } from "lucide-react";
 import type {
   ClientNote,
@@ -246,6 +249,50 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         : null,
     [focusedNoteId, projectNotes]
   );
+
+  const noteMap = useMemo(() => {
+    const map = new Map<string, ClientNote>();
+    for (const n of projectNotes) map.set(n.id, n);
+    return map;
+  }, [projectNotes]);
+
+  const childCountsByNoteId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const n of projectNotes) {
+      if (n.parentId) {
+        counts[n.parentId] = (counts[n.parentId] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [projectNotes]);
+
+  const focusedBreadcrumbs = useMemo(() => {
+    const trail: ClientNote[] = [];
+    let cursor = focusedNote;
+    const seen = new Set<string>();
+    while (cursor && !seen.has(cursor.id)) {
+      seen.add(cursor.id);
+      trail.unshift(cursor);
+      cursor = cursor.parentId ? noteMap.get(cursor.parentId) || null : null;
+    }
+    return trail;
+  }, [focusedNote, noteMap]);
+
+  const focusedChildren = useMemo(() => {
+    if (!focusedNote) return [];
+    return projectNotes
+      .filter((n) => n.parentId === focusedNote.id)
+      .sort((a, b) => a.createdAt - b.createdAt);
+  }, [focusedNote, projectNotes]);
+
+  const focusedChildrenGrouped = useMemo(() => {
+    return spaces
+      .map((sp) => ({
+        space: sp,
+        items: focusedChildren.filter((c) => c.spaceId === sp.id),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [spaces, focusedChildren]);
 
   const groupedSections = useMemo(() => {
     const targetSpaces =
@@ -1116,15 +1163,32 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           <>
             <main className="flex-1 overflow-y-auto px-5 py-6">
               <div className="mx-auto w-full max-w-2xl space-y-6">
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFocusedNoteId(null)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
-                  >
-                    <ArrowLeft className="h-3.5 w-3.5" />
-                    <span>{activeProject.name} notlarına dön</span>
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <nav className="flex flex-wrap items-center gap-1 text-xs text-zinc-500">
+                    <button
+                      type="button"
+                      onClick={() => setFocusedNoteId(null)}
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      <span>{activeProject.name}</span>
+                    </button>
+                    {focusedBreadcrumbs.slice(0, -1).map((crumb) => (
+                      <span
+                        key={crumb.id}
+                        className="inline-flex items-center gap-1"
+                      >
+                        <ChevronRight className="h-3 w-3 text-zinc-300" />
+                        <button
+                          type="button"
+                          onClick={() => setFocusedNoteId(crumb.id)}
+                          className="max-w-[160px] truncate rounded-full px-2 py-1 text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+                        >
+                          {crumb.title || crumb.rawText}
+                        </button>
+                      </span>
+                    ))}
+                  </nav>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -1361,6 +1425,134 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   </div>
                   </div>
                 )}
+
+                {/* Nested Child Notes / Threaded Comments Section (Grouped by Heading) */}
+                <section className="border-t border-zinc-200/80 pt-6 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-zinc-700">
+                      <MessageSquare className="h-4 w-4 text-zinc-400" />
+                      <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                        Alt Notlar & Yorumlar
+                      </h2>
+                      <span className="font-mono text-[11px] text-zinc-400">
+                        {focusedChildren.length}
+                      </span>
+                    </div>
+                  </div>
+
+                  {focusedChildren.length === 0 ? (
+                    <p className="text-xs text-zinc-400">
+                      Bu notun altına henüz yorum veya alt not eklenmemiş.
+                      Aşağıdaki kutudan doğrudan ekleyebilir, istersen ayrı bir
+                      başlık altında toplayabilirsin.
+                    </p>
+                  ) : (
+                    <div className="space-y-5">
+                      {focusedChildrenGrouped.map(({ space: sp, items }) => {
+                        const isChildTask = sp.kind === "tasks";
+                        return (
+                          <div key={sp.id} className="space-y-1">
+                            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 pb-1">
+                              <span>{renderSpaceIcon(sp.kind)}</span>
+                              <span>{sp.name}</span>
+                              <span className="font-mono font-normal">
+                                ({items.length})
+                              </span>
+                            </div>
+                            <div className="divide-y divide-zinc-100 border-l-2 border-zinc-200 pl-3">
+                              {items.map((child) => {
+                                const childDone = Boolean(
+                                  child.metadata.isCompleted
+                                );
+                                const childRaw =
+                                  viewMode === "raw" ||
+                                  Boolean(child.metadata.showRawOnly);
+                                const grandChildCount =
+                                  childCountsByNoteId[child.id] || 0;
+
+                                return (
+                                  <div
+                                    key={child.id}
+                                    onClick={() => setFocusedNoteId(child.id)}
+                                    className="group flex cursor-pointer items-center justify-between gap-2 py-2.5 px-2 -mx-2 rounded-xl transition hover:bg-zinc-50"
+                                  >
+                                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                                      {isChildTask ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            void handlePatchNote(child.id, {
+                                              toggleCompleted: true,
+                                            });
+                                          }}
+                                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                                            childDone
+                                              ? "border-emerald-600 bg-emerald-600 text-white"
+                                              : "border-zinc-300 bg-white hover:border-emerald-600"
+                                          }`}
+                                        >
+                                          {childDone && (
+                                            <Check className="h-3 w-3" />
+                                          )}
+                                        </button>
+                                      ) : (
+                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300 group-hover:bg-blue-500" />
+                                      )}
+
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span
+                                            className={`truncate text-sm font-medium ${
+                                              childDone
+                                                ? "line-through text-zinc-400"
+                                                : "text-zinc-900"
+                                            }`}
+                                          >
+                                            {childRaw
+                                              ? child.rawText
+                                              : child.title || child.rawText}
+                                          </span>
+
+                                          {grandChildCount > 0 && (
+                                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">
+                                              <MessageSquare className="h-2.5 w-2.5" />
+                                              {grandChildCount}
+                                            </span>
+                                          )}
+
+                                          {!childRaw &&
+                                            child.status === "processing" && (
+                                              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
+                                            )}
+                                        </div>
+
+                                        {!childRaw &&
+                                          viewMode === "ai" &&
+                                          child.status !== "processing" &&
+                                          child.summary && (
+                                            <p className="truncate text-xs text-zinc-500 mt-0.5">
+                                              {renderHighlightedText(
+                                                child.summary
+                                              )}
+                                            </p>
+                                          )}
+                                      </div>
+                                    </div>
+
+                                    <div className="shrink-0 opacity-60 group-hover:opacity-100">
+                                      {renderNoteActionsMenu(child)}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
               </div>
             </main>
 
@@ -1371,9 +1563,10 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   activeProjectName={activeProject.name}
                   spaces={spaces}
                   activeSpaceId={activeSpaceTab}
+                  parentNoteId={focusedNote.id}
+                  parentNoteTitle={focusedNote.title || focusedNote.rawText}
                   onNoteCreated={(newNote) => {
                     setNotes((prev) => [newNote, ...prev]);
-                    setFocusedNoteId(newNote.id);
                   }}
                   onError={(msg) => setToastError(msg)}
                 />
@@ -1507,6 +1700,35 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                             /{note.metadata.subtasks.length}
                                           </span>
                                         )}
+
+                                      {note.parentId &&
+                                        noteMap.get(note.parentId) && (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setFocusedNoteId(note.parentId);
+                                            }}
+                                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 hover:bg-zinc-200"
+                                            title="Üst nota git"
+                                          >
+                                            <CornerDownRight className="h-2.5 w-2.5" />
+                                            <span className="max-w-[110px] truncate">
+                                              {noteMap.get(note.parentId)!
+                                                .title ||
+                                                noteMap.get(note.parentId)!
+                                                  .rawText}
+                                            </span>
+                                          </button>
+                                        )}
+
+                                      {(childCountsByNoteId[note.id] || 0) >
+                                        0 && (
+                                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">
+                                          <MessageSquare className="h-2.5 w-2.5" />
+                                          {childCountsByNoteId[note.id]}
+                                        </span>
+                                      )}
 
                                       {!isRaw && note.status === "processing" && (
                                         <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />

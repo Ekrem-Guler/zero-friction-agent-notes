@@ -109,6 +109,11 @@ export async function DELETE(
 
   const { id } = await context.params;
   const db = await ensureDbReady();
+  // Detach any direct child notes so nested comments are never silently lost
+  await db
+    .update(notes)
+    .set({ parentId: null, updatedAt: Date.now() })
+    .where(eq(notes.parentId, id));
   await db.delete(notes).where(eq(notes.id, id));
   return NextResponse.json({ ok: true });
 }

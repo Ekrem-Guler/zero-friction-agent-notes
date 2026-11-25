@@ -499,11 +499,15 @@ export async function processAndEnrichNote(
   const allSpaces = await db.select().from(schemaModule.spaces);
   const noteRows = await db.select().from(notes).where(eq(notes.id, noteId));
   const currentProjectId = noteRows[0]?.projectId || "default";
+  const parentNoteId = noteRows[0]?.parentId || null;
   const projectRows = await db
     .select()
     .from(schemaModule.projects)
     .where(eq(schemaModule.projects.id, currentProjectId));
   const activeProject = projectRows[0];
+  const parentNote = parentNoteId
+    ? (await db.select().from(notes).where(eq(notes.id, parentNoteId)))[0]
+    : null;
 
   const creds = await resolveCredentials();
 
@@ -561,7 +565,11 @@ KULLANICININ KİŞİSEL BAĞLAMI:
 ${creds.userContext ? creds.userContext.slice(0, 400) : "Belirtilmedi (genel yazılım / üretkenlik odaklı özetle)."}
 
 AKTİF PROJE BAĞLAMI:
-${activeProject ? `${activeProject.name}${activeProject.description ? ` — ${activeProject.description}` : ""}` : "Genel Alan"}
+${activeProject ? `${activeProject.name}${activeProject.description ? ` — ${activeProject.description}` : ""}` : "Genel Alan"}${
+      parentNote
+        ? `\n\nÜST NOT (BU NOT ŞU NOTUN ALTINA YORUM/ALT NOT OLARAK EKLENİYOR):\nBaşlık: "${parentNote.title || parentNote.rawText}"\nÖzet: "${parentNote.summary || parentNote.rawText}"`
+        : ""
+    }
 
 MEVCUT BAŞLIKLAR (spaceId SADECE bunlardan biri olabilir):
 ${spacesDescription}

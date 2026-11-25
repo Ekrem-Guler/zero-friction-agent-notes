@@ -31,6 +31,7 @@ export interface ClientSpace {
 export interface ClientNote {
   id: string;
   projectId: string;
+  parentId: string | null;
   spaceId: string;
   rawText: string;
   inputType: NoteInputType;
@@ -98,6 +99,7 @@ export function serializeNote(row: NoteRow): ClientNote {
   return {
     id: row.id,
     projectId: row.projectId || "default",
+    parentId: row.parentId ?? null,
     spaceId: row.spaceId,
     rawText: row.rawText,
     inputType: row.inputType,

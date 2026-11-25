@@ -53,6 +53,7 @@ export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().default("owner"),
   projectId: text("project_id").notNull().default("default"),
+  parentId: text("parent_id"),
   spaceId: text("space_id").notNull(),
   rawText: text("raw_text").notNull(),
   inputType: text("input_type").$type<NoteInputType>().notNull().default("text"),

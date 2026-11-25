@@ -30,6 +30,10 @@ export async function POST(request: Request) {
     (typeof formData?.get("projectId") === "string"
       ? (formData.get("projectId") as string).trim()
       : "") || "default";
+  const parentId =
+    (typeof formData?.get("parentId") === "string"
+      ? (formData.get("parentId") as string).trim()
+      : "") || null;
 
   if (!audioFile || !(audioFile instanceof Blob)) {
     return NextResponse.json(
@@ -72,6 +76,7 @@ export async function POST(request: Request) {
       id,
       userId: "owner",
       projectId,
+      parentId,
       spaceId: "ideas",
       rawText: tr.transcript,
       inputType: "voice",

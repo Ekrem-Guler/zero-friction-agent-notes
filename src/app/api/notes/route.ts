@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     text?: string;
     projectId?: string;
+    parentId?: string | null;
     preferredSpaceId?: string;
     useAi?: boolean;
   };
@@ -48,12 +49,14 @@ export async function POST(request: Request) {
   const now = Date.now();
   const id = crypto.randomUUID();
   const projectId = body.projectId?.trim() || "default";
+  const parentId = body.parentId?.trim() || null;
   const useAi = body.useAi !== false;
 
   const initialRow: typeof notes.$inferInsert = {
     id,
     userId: "owner",
     projectId,
+    parentId,
     spaceId: body.preferredSpaceId || "ideas",
     rawText: trimmed,
     inputType: "text",
