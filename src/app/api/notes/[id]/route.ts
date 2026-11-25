@@ -24,6 +24,7 @@ export async function PATCH(
   }
 
   const body = (await request.json().catch(() => ({}))) as {
+    projectId?: string;
     spaceId?: string;
     toggleCompleted?: boolean;
     toggleSubtaskId?: string;
@@ -77,6 +78,7 @@ export async function PATCH(
   await db
     .update(notes)
     .set({
+      projectId: body.projectId ?? row.projectId,
       spaceId: body.spaceId ?? row.spaceId,
       suggestedSpace: body.dismissSuggestion
         ? null

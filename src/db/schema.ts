@@ -25,6 +25,17 @@ export interface NoteMetadata {
   errorMessage?: string | null;
 }
 
+export const projects = sqliteTable("projects", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().default("owner"),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  color: text("color").notNull().default("emerald"),
+  position: integer("position").notNull().default(0),
+  isDefault: integer("is_default", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const spaces = sqliteTable("spaces", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().default("owner"),
@@ -40,6 +51,7 @@ export const spaces = sqliteTable("spaces", {
 export const notes = sqliteTable("notes", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().default("owner"),
+  projectId: text("project_id").notNull().default("default"),
   spaceId: text("space_id").notNull(),
   rawText: text("raw_text").notNull(),
   inputType: text("input_type").$type<NoteInputType>().notNull().default("text"),
@@ -81,6 +93,7 @@ export const entityCache = sqliteTable("entity_cache", {
   updatedAt: integer("updated_at").notNull(),
 });
 
+export type ProjectRow = typeof projects.$inferSelect;
 export type SpaceRow = typeof spaces.$inferSelect;
 export type NoteRow = typeof notes.$inferSelect;
 export type AppSettingsRow = typeof appSettings.$inferSelect;

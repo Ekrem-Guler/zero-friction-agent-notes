@@ -84,6 +84,17 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
     initPromise = (async () => {
       const client = getDbClient();
       await client.executeMultiple(`
+        CREATE TABLE IF NOT EXISTS projects (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL DEFAULT 'owner',
+          name TEXT NOT NULL,
+          description TEXT NOT NULL DEFAULT '',
+          color TEXT NOT NULL DEFAULT 'emerald',
+          position INTEGER NOT NULL DEFAULT 0,
+          is_default INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS spaces (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL DEFAULT 'owner',
@@ -99,6 +110,7 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
         CREATE TABLE IF NOT EXISTS notes (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL DEFAULT 'owner',
+          project_id TEXT NOT NULL DEFAULT 'default',
           space_id TEXT NOT NULL,
           raw_text TEXT NOT NULL,
           input_type TEXT NOT NULL DEFAULT 'text',
@@ -136,6 +148,39 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
           updated_at INTEGER NOT NULL
         );
       `);
+
+      // Safe migration for existing local.db without project_id
+      try {
+        await client.execute(
+          `ALTER TABLE notes ADD COLUMN project_id TEXT NOT NULL DEFAULT 'default'`
+        );
+      } catch {
+        // Column already exists
+      }
+      await client.execute(
+        `CREATE INDEX IF NOT EXISTS idx_notes_project_created ON notes (project_id, created_at DESC)`
+      );
+
+      const existingProjects = await db
+        .select()
+        .from(schema.projects)
+        .orderBy(asc(schema.projects.position));
+
+      if (existingProjects.length === 0) {
+        await db
+          .insert(schema.projects)
+          .values({
+            id: "default",
+            userId: "owner",
+            name: "Genel Alan",
+            description: "Günlük fikirler, hızlı görevler ve genel araç araştırmaları.",
+            color: "emerald",
+            position: 0,
+            isDefault: true,
+            createdAt: Date.now(),
+          })
+          .onConflictDoNothing();
+      }
 
       const existingSpaces = await db
         .select()

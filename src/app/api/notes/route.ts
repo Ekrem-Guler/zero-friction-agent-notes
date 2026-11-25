@@ -26,6 +26,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as {
     text?: string;
+    projectId?: string;
     preferredSpaceId?: string;
   };
 
@@ -45,10 +46,12 @@ export async function POST(request: Request) {
   const db = await ensureDbReady();
   const now = Date.now();
   const id = crypto.randomUUID();
+  const projectId = body.projectId?.trim() || "default";
 
   const initialRow: typeof notes.$inferInsert = {
     id,
     userId: "owner",
+    projectId,
     spaceId: body.preferredSpaceId || "ideas",
     rawText: trimmed,
     inputType: "text",

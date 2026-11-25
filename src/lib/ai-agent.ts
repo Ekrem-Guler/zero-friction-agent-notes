@@ -495,9 +495,15 @@ export async function processAndEnrichNote(
 ): Promise<void> {
   const db = await ensureDbReady();
   const safeRaw = rawInput.trim().slice(0, SECURITY_LIMITS.MAX_TEXT_CHARS);
-  const allSpaces = await db.select().from(
-    (await import("@/db/schema")).spaces
-  );
+  const schemaModule = await import("@/db/schema");
+  const allSpaces = await db.select().from(schemaModule.spaces);
+  const noteRows = await db.select().from(notes).where(eq(notes.id, noteId));
+  const currentProjectId = noteRows[0]?.projectId || "default";
+  const projectRows = await db
+    .select()
+    .from(schemaModule.projects)
+    .where(eq(schemaModule.projects.id, currentProjectId));
+  const activeProject = projectRows[0];
 
   const creds = await resolveCredentials();
 
@@ -553,6 +559,9 @@ BUGÜNÜN TARİHİ: ${todayIso}
 
 KULLANICININ KİŞİSEL BAĞLAMI:
 ${creds.userContext ? creds.userContext.slice(0, 400) : "Belirtilmedi (genel yazılım / üretkenlik odaklı özetle)."}
+
+AKTİF PROJE BAĞLAMI:
+${activeProject ? `${activeProject.name}${activeProject.description ? ` — ${activeProject.description}` : ""}` : "Genel Alan"}
 
 MEVCUT BAŞLIKLAR (spaceId SADECE bunlardan biri olabilir):
 ${spacesDescription}

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { asc, desc, eq, gte, sql } from "drizzle-orm";
 import { ensureDbReady } from "@/db";
-import { appSettings, notes, spaces } from "@/db/schema";
+import { appSettings, notes, projects, spaces } from "@/db/schema";
 import { isAuthenticated, isPasswordProtectionEnabled } from "@/lib/auth";
 import { decryptSecret, maskApiKey } from "@/lib/crypto";
 import {
   serializeNote,
+  serializeProject,
   serializeSpace,
   type ClientSettings,
   type UsageStats,
@@ -18,9 +19,13 @@ export async function GET() {
 
   const db = await ensureDbReady();
 
-  const [spaceRows, noteRows, settingsRows] = await Promise.all([
+  const [projectRows, spaceRows, noteRows, settingsRows] = await Promise.all([
+    db
+      .select()
+      .from(projects)
+      .orderBy(asc(projects.position), asc(projects.createdAt)),
     db.select().from(spaces).orderBy(asc(spaces.position), asc(spaces.createdAt)),
-    db.select().from(notes).orderBy(desc(notes.createdAt)).limit(250),
+    db.select().from(notes).orderBy(desc(notes.createdAt)).limit(400),
     db.select().from(appSettings).where(eq(appSettings.id, "owner")),
   ]);
 
@@ -74,6 +79,7 @@ export async function GET() {
   };
 
   return NextResponse.json({
+    projects: projectRows.map(serializeProject),
     spaces: spaceRows.map(serializeSpace),
     notes: noteRows.map(serializeNote),
     settings,

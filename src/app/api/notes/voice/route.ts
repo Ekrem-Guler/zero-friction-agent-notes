@@ -26,6 +26,10 @@ export async function POST(request: Request) {
 
   const formData = await request.formData().catch(() => null);
   const audioFile = formData?.get("audio");
+  const projectId =
+    (typeof formData?.get("projectId") === "string"
+      ? (formData.get("projectId") as string).trim()
+      : "") || "default";
 
   if (!audioFile || !(audioFile instanceof Blob)) {
     return NextResponse.json(
@@ -67,6 +71,7 @@ export async function POST(request: Request) {
     const initialRow: typeof notes.$inferInsert = {
       id,
       userId: "owner",
+      projectId,
       spaceId: "ideas",
       rawText: tr.transcript,
       inputType: "voice",

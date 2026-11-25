@@ -4,9 +4,19 @@ import type {
   NoteMetadata,
   NoteRow,
   NoteStatus,
+  ProjectRow,
   SpaceKind,
   SpaceRow,
 } from "@/db/schema";
+
+export interface ClientProject {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  position: number;
+  isDefault: boolean;
+}
 
 export interface ClientSpace {
   id: string;
@@ -20,6 +30,7 @@ export interface ClientSpace {
 
 export interface ClientNote {
   id: string;
+  projectId: string;
   spaceId: string;
   rawText: string;
   inputType: NoteInputType;
@@ -54,6 +65,17 @@ export interface UsageStats {
   totalNotesCount: number;
 }
 
+export function serializeProject(row: ProjectRow): ClientProject {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    color: row.color,
+    position: row.position,
+    isDefault: row.isDefault,
+  };
+}
+
 export function serializeSpace(row: SpaceRow): ClientSpace {
   return {
     id: row.id,
@@ -75,6 +97,7 @@ export function serializeNote(row: NoteRow): ClientNote {
   }
   return {
     id: row.id,
+    projectId: row.projectId || "default",
     spaceId: row.spaceId,
     rawText: row.rawText,
     inputType: row.inputType,
