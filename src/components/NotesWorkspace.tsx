@@ -70,6 +70,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const [activeSpaceTab, setActiveSpaceTab] = useState<string>("all");
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
   const [composeHeroMode, setComposeHeroMode] = useState<boolean>(false);
+  const [showBriefSummaries, setShowBriefSummaries] = useState<boolean>(true);
   const [openMenuNoteId, setOpenMenuNoteId] = useState<string | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -230,6 +231,20 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         : null,
     [focusedNoteId, projectNotes]
   );
+
+  const groupedSections = useMemo(() => {
+    const targetSpaces =
+      activeSpaceTab === "all"
+        ? spaces
+        : spaces.filter((s) => s.id === activeSpaceTab);
+
+    return targetSpaces
+      .map((sp) => ({
+        space: sp,
+        items: filteredNotes.filter((n) => n.spaceId === sp.id),
+      }))
+      .filter((sec) => activeSpaceTab !== "all" || sec.items.length > 0);
+  }, [spaces, activeSpaceTab, filteredNotes]);
 
   async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
@@ -398,8 +413,6 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     );
   }
 
-  const activeSpace =
-    activeSpaceTab === "all" ? null : spaceMap.get(activeSpaceTab);
   const aiConfigured = Boolean(
     settings &&
       (settings.hasGeminiByok ||
@@ -934,18 +947,22 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   PROJECT_DOT_COLORS.emerald
                 }`}
               />
-              <span className="truncate text-sm font-medium text-zinc-800">
+              <span className="truncate text-sm font-semibold text-zinc-900">
                 {activeProject.name}
               </span>
-              {activeSpace && (
-                <span className="text-xs text-zinc-400">
-                  / {activeSpace.name}
-                </span>
-              )}
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {!showCenteredHero && !focusedNote && filteredNotes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowBriefSummaries((v) => !v)}
+                className="hidden sm:inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
+              >
+                {showBriefSummaries ? "Sadece Başlık" : "Kısa Özetli"}
+              </button>
+            )}
             {hasProcessingNotes && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-medium text-blue-700">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -1263,10 +1280,10 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             </div>
           </>
         ) : (
-          /* Clean Editorial List / Table Stream (No chunky cards!) */
+          /* Clean Sectioned List View (Tümü groups all spaces; single space uses the same clean structure) */
           <>
-            <main className="flex-1 overflow-y-auto px-5 py-4">
-              <div className="mx-auto w-full max-w-3xl">
+            <main className="flex-1 overflow-y-auto px-5 py-3">
+              <div className="mx-auto w-full max-w-3xl space-y-8 pb-4">
                 {loading ? (
                   <div className="flex items-center justify-center py-16 text-zinc-400">
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -1275,216 +1292,153 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   <div className="py-16 text-center text-sm text-zinc-400">
                     Bu başlıkta henüz not yok. Aşağıdaki kutudan ekleyebilirsiniz.
                   </div>
-                ) : activeSpace?.kind === "resources" ? (
-                  /* Clean Minimalist White Table for Araçlar & Kaynaklar */
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-zinc-200 text-[11px] uppercase tracking-wider text-zinc-400">
-                          <th className="py-3 pr-4 font-medium">Araç / Kaynak</th>
-                          <th className="px-3 py-3 font-medium">Kategori</th>
-                          <th className="px-3 py-3 font-medium">
-                            Özet & Proje Kullanımı
-                          </th>
-                          <th className="py-3 pl-3 text-right font-medium" />
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-100">
-                        {filteredNotes.map((note) => (
-                          <tr
-                            key={note.id}
-                            onClick={() => setFocusedNoteId(note.id)}
-                            className="group cursor-pointer transition hover:bg-zinc-50/80"
-                          >
-                            <td className="align-top py-4 pr-4 sm:w-44">
-                              <div className="flex items-center gap-1.5 font-semibold text-zinc-900 text-sm">
-                                <span>{note.title}</span>
-                                {note.metadata.officialUrl && (
-                                  <a
-                                    href={note.metadata.officialUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="text-blue-600 hover:text-blue-700"
-                                  >
-                                    <ExternalLink className="h-3.5 w-3.5" />
-                                  </a>
-                                )}
-                              </div>
-                            </td>
-                            <td className="align-top px-3 py-4 sm:w-36">
-                              {note.metadata.categoryTag && (
-                                <span className="inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700">
-                                  {note.metadata.categoryTag}
-                                </span>
-                              )}
-                            </td>
-                            <td className="align-top px-3 py-4">
-                              {note.status === "processing" ? (
-                                <span className="inline-flex items-center gap-1.5 text-blue-600">
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  Araştırılıyor...
-                                </span>
-                              ) : (
-                                <>
-                                  <p className="text-zinc-700 leading-relaxed">
-                                    {note.summary}
-                                  </p>
-                                  {note.metadata.projectUseCase && (
-                                    <p className="mt-1 text-[11px] text-emerald-700">
-                                      <strong>Senin için:</strong>{" "}
-                                      {note.metadata.projectUseCase}
-                                    </p>
-                                  )}
-                                </>
-                              )}
-                            </td>
-                            <td className="align-top py-4 pl-3 text-right">
-                              {renderNoteActionsMenu(note)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
                 ) : (
-                  /* Borderless Editorial Rows (Hairline separated, click to focus) */
-                  <div className="divide-y divide-zinc-100">
-                    {filteredNotes.map((note) => {
-                      const sp = spaceMap.get(note.spaceId);
-                      const isTaskSpace = sp?.kind === "tasks";
-                      const isDone = Boolean(note.metadata.isCompleted);
+                  groupedSections.map(({ space: sp, items }) => {
+                    const isTaskSpace = sp.kind === "tasks";
+                    const isResourceSpace = sp.kind === "resources";
 
-                      return (
-                        <article
-                          key={note.id}
-                          onClick={() => setFocusedNoteId(note.id)}
-                          className="group cursor-pointer py-4 transition hover:bg-zinc-50/70 -mx-3 px-3 rounded-2xl"
-                        >
-                          {note.suggestedSpace && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-indigo-50/80 px-3 py-1.5 text-xs text-indigo-900"
-                            >
-                              <span className="flex items-center gap-1.5">
-                                <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-                                <span>
-                                  Öneri:{" "}
-                                  <strong>
-                                    &ldquo;{note.suggestedSpace}&rdquo;
-                                  </strong>{" "}
-                                  başlığı açılsın mı?
-                                </span>
-                              </span>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    void handleAcceptSuggestedSpace(
-                                      note.id,
-                                      note.suggestedSpace!
-                                    )
-                                  }
-                                  className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-medium text-white"
-                                >
-                                  + Aç
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    void handlePatchNote(note.id, {
-                                      dismissSuggestion: true,
-                                    })
-                                  }
-                                  className="text-[11px] text-indigo-700 hover:underline"
-                                >
-                                  Yoksay
-                                </button>
-                              </div>
-                            </div>
-                          )}
+                    return (
+                      <section key={sp.id} className="space-y-1">
+                        {/* Clean Section Header */}
+                        <div className="flex items-center justify-between border-b border-zinc-200/80 pb-2">
+                          <div className="flex items-center gap-2 text-zinc-800">
+                            <span className="text-zinc-400">
+                              {renderSpaceIcon(sp.kind)}
+                            </span>
+                            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-600">
+                              {sp.name}
+                            </h2>
+                            <span className="font-mono text-[11px] text-zinc-400">
+                              {items.length}
+                            </span>
+                          </div>
+                        </div>
 
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex flex-1 items-start gap-3 min-w-0">
-                              {isTaskSpace && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    void handlePatchNote(note.id, {
-                                      toggleCompleted: true,
-                                    });
-                                  }}
-                                  className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
-                                    isDone
-                                      ? "border-emerald-600 bg-emerald-600 text-white"
-                                      : "border-zinc-300 bg-white hover:border-emerald-600"
-                                  }`}
-                                >
-                                  {isDone && <Check className="h-3 w-3" />}
-                                </button>
-                              )}
+                        {/* Compact, High-Clarity Rows under Each Heading */}
+                        <div className="divide-y divide-zinc-100">
+                          {items.map((note) => {
+                            const isDone = Boolean(note.metadata.isCompleted);
 
-                              <div className="flex-1 min-w-0 space-y-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <h3
-                                    className={`text-[15px] font-semibold ${
-                                      isDone
-                                        ? "line-through text-zinc-400"
-                                        : "text-zinc-900"
-                                    }`}
-                                  >
-                                    {note.title}
-                                  </h3>
-
-                                  {sp && (
-                                    <span className="text-[11px] font-medium text-zinc-400">
-                                      • {sp.name}
-                                    </span>
+                            return (
+                              <div
+                                key={note.id}
+                                onClick={() => setFocusedNoteId(note.id)}
+                                className="group flex cursor-pointer items-center justify-between gap-3 py-2.5 px-2 -mx-2 rounded-xl transition hover:bg-zinc-50"
+                              >
+                                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                                  {isTaskSpace ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void handlePatchNote(note.id, {
+                                          toggleCompleted: true,
+                                        });
+                                      }}
+                                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                                        isDone
+                                          ? "border-emerald-600 bg-emerald-600 text-white"
+                                          : "border-zinc-300 bg-white hover:border-emerald-600"
+                                      }`}
+                                    >
+                                      {isDone && <Check className="h-3 w-3" />}
+                                    </button>
+                                  ) : (
+                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300 group-hover:bg-blue-500" />
                                   )}
 
-                                  {note.metadata.dueDate && (
-                                    <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
-                                      <Calendar className="h-3 w-3" />
-                                      {note.metadata.dueDate}
-                                    </span>
-                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`truncate text-sm font-medium ${
+                                          isDone
+                                            ? "line-through text-zinc-400"
+                                            : "text-zinc-900"
+                                        }`}
+                                      >
+                                        {note.title || note.rawText}
+                                      </span>
+
+                                      {isResourceSpace &&
+                                        note.metadata.categoryTag && (
+                                          <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                                            {note.metadata.categoryTag}
+                                          </span>
+                                        )}
+
+                                      {isResourceSpace &&
+                                        note.metadata.officialUrl && (
+                                          <a
+                                            href={note.metadata.officialUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            title={note.metadata.officialUrl}
+                                            className="shrink-0 text-zinc-400 hover:text-blue-600"
+                                          >
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        )}
+
+                                      {note.metadata.dueDate && (
+                                        <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-amber-700">
+                                          <Calendar className="h-3 w-3" />
+                                          {note.metadata.dueDate}
+                                        </span>
+                                      )}
+
+                                      {note.metadata.subtasks &&
+                                        note.metadata.subtasks.length > 0 && (
+                                          <span className="shrink-0 font-mono text-[10px] text-zinc-400">
+                                            {
+                                              note.metadata.subtasks.filter(
+                                                (s) => s.done
+                                              ).length
+                                            }
+                                            /{note.metadata.subtasks.length}
+                                          </span>
+                                        )}
+
+                                      {note.status === "processing" && (
+                                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
+                                      )}
+                                    </div>
+
+                                    {showBriefSummaries &&
+                                      note.status !== "processing" &&
+                                      note.summary && (
+                                        <p className="truncate text-xs text-zinc-500 mt-0.5">
+                                          {note.summary}
+                                        </p>
+                                      )}
+                                  </div>
                                 </div>
 
-                                <p className="text-[13px] leading-relaxed text-zinc-600 line-clamp-2">
-                                  {note.status === "processing" ? (
-                                    <span className="inline-flex items-center gap-1.5 text-blue-600">
-                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                      {note.summary}
-                                    </span>
-                                  ) : (
-                                    note.summary
+                                <div className="flex shrink-0 items-center gap-1 opacity-60 group-hover:opacity-100">
+                                  {note.suggestedSpace && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void handleAcceptSuggestedSpace(
+                                          note.id,
+                                          note.suggestedSpace!
+                                        );
+                                      }}
+                                      className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 hover:bg-indigo-100"
+                                    >
+                                      + {note.suggestedSpace}
+                                    </button>
                                   )}
-                                </p>
-
-                                {note.metadata.subtasks &&
-                                  note.metadata.subtasks.length > 0 && (
-                                    <div className="pt-1 text-[11px] text-zinc-400">
-                                      {
-                                        note.metadata.subtasks.filter(
-                                          (s) => s.done
-                                        ).length
-                                      }
-                                      /{note.metadata.subtasks.length} alt adım
-                                      tamamlandı
-                                    </div>
-                                  )}
+                                  {renderNoteActionsMenu(note)}
+                                </div>
                               </div>
-                            </div>
-
-                            <div className="shrink-0 opacity-70 group-hover:opacity-100">
-                              {renderNoteActionsMenu(note)}
-                            </div>
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  })
                 )}
               </div>
             </main>
