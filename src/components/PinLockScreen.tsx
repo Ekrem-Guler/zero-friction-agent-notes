@@ -38,15 +38,15 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-zinc-950">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-800/80 bg-zinc-900/70 p-6 shadow-2xl backdrop-blur">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-[#f8f9fa]">
+      <div className="w-full max-w-sm rounded-3xl border border-zinc-200/80 bg-white p-7 shadow-xl shadow-zinc-200/50">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <Lock className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-base font-semibold text-zinc-100">ZeroNote</h1>
-            <p className="text-xs text-zinc-400">
+            <h1 className="text-base font-semibold text-zinc-900">ZeroNote</h1>
+            <p className="text-xs text-zinc-500">
               Kişisel AI Not Alanına Giriş Yapın
             </p>
           </div>
@@ -59,15 +59,15 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Giriş şifresi / PIN..."
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500/60 focus:outline-none"
+            className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
           />
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && <p className="text-xs text-rose-600">{error}</p>}
 
           <button
             type="submit"
             disabled={loading || !password.trim()}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-medium text-zinc-950 transition hover:bg-emerald-400 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-40"
           >
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -232,7 +232,7 @@ export function CaptureBar({
     `00:${sec.toString().padStart(2, "0")}`;
 
   return (
-    <div className="relative rounded-3xl border border-zinc-700/70 bg-[#1e1f20] px-4 py-3 shadow-2xl shadow-black/40 transition focus-within:border-blue-400/50">
+    <div className="relative rounded-[28px] border border-zinc-200/90 bg-[#f0f4f9] px-5 py-3.5 shadow-sm transition focus-within:border-zinc-300 focus-within:bg-white focus-within:shadow-md">
       {isRecording ? (
         <div className="flex items-center justify-between gap-3 py-1.5">
           <div className="flex items-center gap-3">
@@ -241,10 +241,10 @@ export function CaptureBar({
               <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500" />
             </span>
             <div>
-              <p className="text-sm font-medium text-zinc-100">
+              <p className="text-sm font-medium text-zinc-900">
                 Sesli not dinleniyor...
               </p>
-              <p className="text-xs font-mono text-zinc-400">
+              <p className="text-xs font-mono text-zinc-500">
                 {formatSeconds(recordingSeconds)} / 00:{MAX_VOICE_SECONDS}
               </p>
             </div>
@@ -254,7 +254,7 @@ export function CaptureBar({
             <button
               type="button"
               onClick={cancelRecording}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700"
+              className="flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
             >
               <X className="h-3.5 w-3.5" />
               <span>İptal</span>
@@ -262,7 +262,7 @@ export function CaptureBar({
             <button
               type="button"
               onClick={stopAndSendRecording}
-              className="flex items-center gap-1.5 rounded-full bg-blue-500 px-4 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-blue-400"
+              className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
             >
               <Square className="h-3 w-3 fill-current" />
               <span>Bitir & Gönder</span>
@@ -270,7 +270,7 @@ export function CaptureBar({
           </div>
         </div>
       ) : uploadingVoice ? (
-        <div className="flex items-center justify-center gap-2.5 py-2.5 text-sm text-blue-300">
+        <div className="flex items-center justify-center gap-2.5 py-2.5 text-sm text-blue-600">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Ses kaydı AI tarafından yazıya dökülüyor...</span>
         </div>
@@ -284,27 +284,27 @@ export function CaptureBar({
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleTextareaKeyDown}
-            placeholder={`${activeProjectName} projesine not bırakın... (örn: "Semrush", "yarın bütçe sunumu" veya bir fikir)`}
-            className="w-full resize-none bg-transparent px-1 py-1 text-[15px] leading-relaxed text-zinc-100 placeholder:text-zinc-400 focus:outline-none"
+            placeholder={`${activeProjectName} için bir not, araç adı veya görev yazın...`}
+            className="w-full resize-none bg-transparent py-1 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-500 focus:outline-none"
           />
 
           <div className="mt-1 flex items-center justify-between pt-1">
             <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
               <span className="hidden sm:inline">
                 Enter ile gönder • Ajan otomatik araştırır & sınıflandırır
               </span>
-              <span className="font-mono text-zinc-500">
+              <span className="font-mono text-zinc-400">
                 {text.length}/{MAX_CHARS}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={startRecording}
                 title="Sesli Not (Maks. 45 sn)"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-300 transition hover:bg-zinc-700/60 hover:text-blue-300"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-200/70 hover:text-blue-600"
               >
                 <Mic className="h-[18px] w-[18px]" />
               </button>
@@ -314,7 +314,7 @@ export function CaptureBar({
                 onClick={() => void submitNote()}
                 disabled={!text.trim() || submittingText}
                 title="Gönder"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-zinc-950 transition hover:bg-blue-300 disabled:bg-zinc-700 disabled:text-zinc-500"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 text-white transition hover:bg-blue-600 disabled:bg-zinc-300 disabled:text-zinc-500"
               >
                 {submittingText ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

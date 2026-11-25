@@ -26,6 +26,8 @@ import {
   Menu,
   ArrowLeft,
   SquarePen,
+  MoreHorizontal,
+  Layers,
 } from "lucide-react";
 import type {
   ClientNote,
@@ -43,11 +45,11 @@ interface NotesWorkspaceProps {
 }
 
 const PROJECT_DOT_COLORS: Record<string, string> = {
-  emerald: "bg-emerald-400",
-  blue: "bg-blue-400",
-  violet: "bg-violet-400",
-  amber: "bg-amber-400",
-  rose: "bg-rose-400",
+  emerald: "bg-emerald-500",
+  blue: "bg-blue-500",
+  violet: "bg-violet-500",
+  amber: "bg-amber-500",
+  rose: "bg-rose-500",
 };
 
 export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
@@ -68,6 +70,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const [activeSpaceTab, setActiveSpaceTab] = useState<string>("all");
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
   const [composeHeroMode, setComposeHeroMode] = useState<boolean>(false);
+  const [openMenuNoteId, setOpenMenuNoteId] = useState<string | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState<boolean>(false);
@@ -75,12 +78,10 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const [toastError, setToastError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // New project form state
   const [addingProject, setAddingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
 
-  // New space form state
   const [addingSpace, setAddingSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState("");
   const [newSpaceDesc, setNewSpaceDesc] = useState("");
@@ -207,7 +208,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     return counts;
   }, [projectNotes]);
 
-  const sidebarFilteredNotes = useMemo(() => {
+  const filteredNotes = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return projectNotes.filter((n) => {
       if (activeSpaceTab !== "all" && n.spaceId !== activeSpaceTab) return false;
@@ -222,13 +223,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     });
   }, [projectNotes, activeSpaceTab, searchQuery]);
 
-  const centerNotes = useMemo(() => {
-    if (focusedNoteId) {
-      const found = projectNotes.find((n) => n.id === focusedNoteId);
-      return found ? [found] : sidebarFilteredNotes;
-    }
-    return sidebarFilteredNotes;
-  }, [focusedNoteId, projectNotes, sidebarFilteredNotes]);
+  const focusedNote = useMemo(
+    () =>
+      focusedNoteId
+        ? projectNotes.find((n) => n.id === focusedNoteId) || null
+        : null,
+    [focusedNoteId, projectNotes]
+  );
 
   async function handleCreateProject(e: React.FormEvent) {
     e.preventDefault();
@@ -310,6 +311,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       );
       setActiveSpaceTab(data.space.id);
       setFocusedNoteId(null);
+      setComposeHeroMode(false);
       setNewSpaceName("");
       setNewSpaceDesc("");
       setAddingSpace(false);
@@ -376,6 +378,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   async function handleDeleteNote(noteId: string) {
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
     if (focusedNoteId === noteId) setFocusedNoteId(null);
+    setOpenMenuNoteId(null);
     await fetch(`/api/notes/${noteId}`, { method: "DELETE" }).catch(() => null);
   }
 
@@ -404,7 +407,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         settings.hasSystemKey)
   );
   const showCenteredHero =
-    !loading && (projectNotes.length === 0 || composeHeroMode) && !focusedNoteId;
+    !loading && (projectNotes.length === 0 || composeHeroMode) && !focusedNote;
 
   function renderSpaceIcon(kind: string) {
     if (kind === "tasks") return <CheckSquare className="h-3.5 w-3.5" />;
@@ -413,15 +416,115 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     return <Folder className="h-3.5 w-3.5" />;
   }
 
+  function renderNoteActionsMenu(note: ClientNote) {
+    const isOpen = openMenuNoteId === note.id;
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpenMenuNoteId(isOpen ? null : note.id);
+          }}
+          title="Seçenekler"
+          className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+
+        {isOpen && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute right-0 top-8 z-30 w-52 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl shadow-zinc-200/70"
+          >
+            <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              Başlık Değiştir
+            </div>
+            <div className="mb-1.5 space-y-0.5">
+              {spaces.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setOpenMenuNoteId(null);
+                    void handlePatchNote(note.id, { spaceId: s.id });
+                  }}
+                  className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-xs ${
+                    note.spaceId === s.id
+                      ? "bg-blue-50 text-blue-700 font-medium"
+                      : "text-zinc-700 hover:bg-zinc-100"
+                  }`}
+                >
+                  <span>{s.name}</span>
+                  {note.spaceId === s.id && <Check className="h-3 w-3" />}
+                </button>
+              ))}
+            </div>
+
+            {projects.length > 1 && (
+              <>
+                <div className="border-t border-zinc-100 pt-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                  Projeye Taşı
+                </div>
+                <div className="mb-1.5 space-y-0.5">
+                  {projects.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setOpenMenuNoteId(null);
+                        void handlePatchNote(note.id, { projectId: p.id });
+                      }}
+                      className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-xs ${
+                        note.projectId === p.id
+                          ? "bg-blue-50 text-blue-700 font-medium"
+                          : "text-zinc-700 hover:bg-zinc-100"
+                      }`}
+                    >
+                      <span className="truncate">{p.name}</span>
+                      {note.projectId === p.id && <Check className="h-3 w-3" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <div className="border-t border-zinc-100 pt-1 space-y-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenMenuNoteId(null);
+                  void handlePatchNote(note.id, { action: "reprocess" });
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Yeniden Analiz Et</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteNote(note.id)}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Notu Sil</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-[#1e1f20] text-zinc-200 select-none">
+    <div className="flex h-full flex-col bg-[#f8f9fa] text-zinc-800 select-none">
       {/* Sidebar Header */}
-      <div className="flex items-center justify-between px-3.5 pt-3.5 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-emerald-400 text-xs font-bold text-zinc-950">
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 text-xs font-semibold text-white">
             Z
           </div>
-          <span className="text-sm font-semibold tracking-tight text-zinc-100">
+          <span className="text-[15px] font-semibold tracking-tight text-zinc-900">
             ZeroNote
           </span>
         </div>
@@ -432,7 +535,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             setMobileDrawerOpen(false);
           }}
           title="Kenar çubuğunu gizle"
-          className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+          className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-900"
         >
           <PanelLeftClose className="h-4 w-4" />
         </button>
@@ -447,207 +550,318 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             setComposeHeroMode(true);
             setMobileDrawerOpen(false);
           }}
-          className="flex w-full items-center gap-2.5 rounded-full bg-[#282a2c] px-3.5 py-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700/80"
+          className="flex w-full items-center gap-2.5 rounded-full bg-[#e8eef7] px-4 py-2.5 text-xs font-medium text-zinc-900 transition hover:bg-[#dce5f2]"
         >
-          <SquarePen className="h-4 w-4 text-blue-400" />
-          <span>Yeni Not / Ajan Ekranı</span>
+          <SquarePen className="h-4 w-4 text-blue-600" />
+          <span>Yeni Not / Ajan</span>
         </button>
       </div>
 
-      {/* Projects Section */}
-      <div className="px-3 pt-2 pb-2 border-b border-zinc-800/80">
-        <div className="mb-1.5 flex items-center justify-between px-1">
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-            <FolderKanban className="h-3.5 w-3.5" />
-            <span>Projeler</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setAddingProject((v) => !v)}
-            title="Yeni Proje Oluştur"
-            className="rounded-md p-1 text-zinc-400 hover:bg-zinc-800 hover:text-blue-300"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
-        {addingProject && (
-          <form
-            onSubmit={handleCreateProject}
-            className="mb-2 space-y-1.5 rounded-xl border border-zinc-700/80 bg-[#131314] p-2.5"
-          >
-            <input
-              type="text"
-              autoFocus
-              maxLength={40}
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              placeholder="Proje adı (örn: SaaS Fikrim)"
-              className="w-full rounded-lg border border-zinc-800 bg-[#1e1f20] px-2.5 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500/50 focus:outline-none"
-            />
-            <input
-              type="text"
-              maxLength={140}
-              value={newProjectDesc}
-              onChange={(e) => setNewProjectDesc(e.target.value)}
-              placeholder="Proje bağlamı (AI için ipucu)"
-              className="w-full rounded-lg border border-zinc-800 bg-[#1e1f20] px-2.5 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500/50 focus:outline-none"
-            />
-            <div className="flex justify-end gap-1.5">
-              <button
-                type="button"
-                onClick={() => setAddingProject(false)}
-                className="rounded-lg px-2 py-1 text-[11px] text-zinc-400 hover:bg-zinc-800"
-              >
-                İptal
-              </button>
-              <button
-                type="submit"
-                className="rounded-lg bg-blue-500 px-2.5 py-1 text-[11px] font-semibold text-zinc-950 hover:bg-blue-400"
-              >
-                Ekle
-              </button>
-            </div>
-          </form>
-        )}
-
-        <div className="max-h-40 space-y-0.5 overflow-y-auto pr-0.5">
-          {projects.map((prj) => {
-            const isActive = prj.id === activeProject.id;
-            const count = countsByProject[prj.id] || 0;
-            const dotClass =
-              PROJECT_DOT_COLORS[prj.color] || PROJECT_DOT_COLORS.emerald;
-
-            return (
-              <div
-                key={prj.id}
-                className={`group flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition cursor-pointer ${
-                  isActive
-                    ? "bg-[#004a77]/45 text-blue-200 font-medium"
-                    : "text-zinc-300 hover:bg-zinc-800/70"
-                }`}
-                onClick={() => {
-                  setActiveProjectId(prj.id);
-                  setFocusedNoteId(null);
-                  setComposeHeroMode(false);
-                }}
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`} />
-                  <span className="truncate">{prj.name}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-[11px] text-zinc-500">{count}</span>
-                  {!prj.isDefault && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDeleteProject(prj.id);
-                      }}
-                      title="Projeyi Sil"
-                      className="hidden rounded p-0.5 text-zinc-500 hover:text-rose-400 group-hover:inline-flex"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Notes Navigation List for Selected Project */}
-      <div className="flex flex-1 flex-col min-h-0 px-3 pt-3">
-        <div className="mb-2 flex items-center justify-between px-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-            Proje Notları
-          </span>
-          {focusedNoteId && (
+      {/* Scrollable Sidebar Body: Projects + Categories + Notes */}
+      <div className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
+        {/* 1. Projects Section */}
+        <section className="pt-1">
+          <div className="mb-1.5 flex items-center justify-between px-1.5">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              <FolderKanban className="h-3.5 w-3.5" />
+              <span>Projeler</span>
+            </span>
             <button
               type="button"
-              onClick={() => setFocusedNoteId(null)}
-              className="text-[11px] text-blue-400 hover:underline"
+              onClick={() => setAddingProject((v) => !v)}
+              title="Yeni Proje Oluştur"
+              className="rounded-full p-1 text-zinc-500 hover:bg-zinc-200/70 hover:text-blue-600"
             >
-              Tümünü Gör
+              <Plus className="h-3.5 w-3.5" />
             </button>
-          )}
-        </div>
+          </div>
 
-        <div className="relative mb-2">
-          <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Proje içinde ara..."
-            className="w-full rounded-xl border border-zinc-800 bg-[#131314] py-1.5 pl-8 pr-2.5 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-zinc-700 focus:outline-none"
-          />
-        </div>
-
-        <div className="flex-1 space-y-1 overflow-y-auto pr-1 pb-2">
-          {sidebarFilteredNotes.length === 0 ? (
-            <p className="px-2 py-4 text-center text-[11px] text-zinc-500">
-              Bu projede henüz not yok.
-            </p>
-          ) : (
-            sidebarFilteredNotes.map((n) => {
-              const sp = spaceMap.get(n.spaceId);
-              const isSelected = focusedNoteId === n.id;
-              return (
+          {addingProject && (
+            <form
+              onSubmit={handleCreateProject}
+              className="mb-2 space-y-1.5 rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-xs"
+            >
+              <input
+                type="text"
+                autoFocus
+                maxLength={40}
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="Proje adı (örn: SaaS Fikrim)"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+              />
+              <input
+                type="text"
+                maxLength={140}
+                value={newProjectDesc}
+                onChange={(e) => setNewProjectDesc(e.target.value)}
+                placeholder="AI için kısa bağlam (isteğe bağlı)"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+              />
+              <div className="flex justify-end gap-1.5">
                 <button
-                  key={n.id}
                   type="button"
+                  onClick={() => setAddingProject(false)}
+                  className="rounded-lg px-2 py-1 text-[11px] text-zinc-500 hover:bg-zinc-100"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-zinc-800"
+                >
+                  Ekle
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="space-y-0.5">
+            {projects.map((prj) => {
+              const isActive = prj.id === activeProject.id;
+              const count = countsByProject[prj.id] || 0;
+              const dotClass =
+                PROJECT_DOT_COLORS[prj.color] || PROJECT_DOT_COLORS.emerald;
+
+              return (
+                <div
+                  key={prj.id}
                   onClick={() => {
-                    setFocusedNoteId(n.id);
+                    setActiveProjectId(prj.id);
+                    setFocusedNoteId(null);
                     setComposeHeroMode(false);
-                    setMobileDrawerOpen(false);
                   }}
-                  className={`flex w-full flex-col gap-0.5 rounded-xl px-2.5 py-2 text-left transition ${
-                    isSelected
-                      ? "bg-[#282a2c] text-zinc-100 ring-1 ring-blue-500/40"
-                      : "text-zinc-300 hover:bg-zinc-800/60"
+                  className={`group flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                    isActive
+                      ? "bg-[#d3e3fd]/60 text-blue-950 font-semibold"
+                      : "text-zinc-700 hover:bg-zinc-200/60"
                   }`}
                 >
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={`h-2 w-2 shrink-0 rounded-full ${dotClass}`}
+                    />
+                    <span className="truncate">{prj.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-zinc-400">{count}</span>
+                    {!prj.isDefault && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteProject(prj.id);
+                        }}
+                        title="Projeyi Sil"
+                        className="hidden rounded p-0.5 text-zinc-400 hover:text-rose-600 group-hover:inline-flex"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 2. Categories / Spaces (Moved cleanly from top header into sidebar) */}
+        <section className="border-t border-zinc-200/80 pt-3">
+          <div className="mb-1.5 flex items-center justify-between px-1.5">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              <Layers className="h-3.5 w-3.5" />
+              <span>Başlıklar</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setAddingSpace((v) => !v)}
+              title="Yeni Başlık Aç"
+              className="rounded-full p-1 text-zinc-500 hover:bg-zinc-200/70 hover:text-blue-600"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {addingSpace && (
+            <form
+              onSubmit={handleCreateSpace}
+              className="mb-2 space-y-1.5 rounded-2xl border border-zinc-200 bg-white p-2.5 shadow-xs"
+            >
+              <input
+                type="text"
+                autoFocus
+                maxLength={36}
+                value={newSpaceName}
+                onChange={(e) => setNewSpaceName(e.target.value)}
+                placeholder="Başlık adı (örn: Yatırım)"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+              />
+              <input
+                type="text"
+                maxLength={120}
+                value={newSpaceDesc}
+                onChange={(e) => setNewSpaceDesc(e.target.value)}
+                placeholder="AI için ipucu (isteğe bağlı)"
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
+              />
+              <div className="flex justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setAddingSpace(false)}
+                  className="rounded-lg px-2 py-1 text-[11px] text-zinc-500 hover:bg-zinc-100"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-zinc-800"
+                >
+                  Aç
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="space-y-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSpaceTab("all");
+                setFocusedNoteId(null);
+                setComposeHeroMode(false);
+              }}
+              className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition ${
+                activeSpaceTab === "all" && !composeHeroMode
+                  ? "bg-zinc-200/80 font-semibold text-zinc-900"
+                  : "text-zinc-600 hover:bg-zinc-200/50"
+              }`}
+            >
+              <span>Tümü</span>
+              <span className="text-[11px] text-zinc-400">
+                {projectNotes.length}
+              </span>
+            </button>
+
+            {spaces.map((sp) => {
+              const active = activeSpaceTab === sp.id && !composeHeroMode;
+              const count = countsBySpaceInProject[sp.id] || 0;
+              return (
+                <div
+                  key={sp.id}
+                  onClick={() => {
+                    setActiveSpaceTab(sp.id);
+                    setFocusedNoteId(null);
+                    setComposeHeroMode(false);
+                  }}
+                  className={`group flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                    active
+                      ? "bg-zinc-200/80 font-semibold text-zinc-900"
+                      : "text-zinc-600 hover:bg-zinc-200/50"
+                  }`}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    {renderSpaceIcon(sp.kind)}
+                    <span className="truncate">{sp.name}</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[11px] text-zinc-400">{count}</span>
+                    {!sp.isSystem && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handleDeleteCustomSpace(sp.id);
+                        }}
+                        title="Başlığı Sil"
+                        className="hidden rounded p-0.5 text-zinc-400 hover:text-rose-600 group-hover:inline-flex"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 3. Notes List inside Selected Project */}
+        <section className="border-t border-zinc-200/80 pt-3">
+          <div className="mb-2 flex items-center justify-between px-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+              Notlar
+            </span>
+            {focusedNoteId && (
+              <button
+                type="button"
+                onClick={() => setFocusedNoteId(null)}
+                className="text-[11px] font-medium text-blue-600 hover:underline"
+              >
+                Liste
+              </button>
+            )}
+          </div>
+
+          <div className="relative mb-2">
+            <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Ara..."
+              className="w-full rounded-xl border border-zinc-200/90 bg-white py-1.5 pl-8 pr-2.5 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-0.5">
+            {filteredNotes.length === 0 ? (
+              <p className="px-2 py-4 text-center text-[11px] text-zinc-400">
+                Henüz not yok.
+              </p>
+            ) : (
+              filteredNotes.map((n) => {
+                const isSelected = focusedNoteId === n.id;
+                return (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => {
+                      setFocusedNoteId(n.id);
+                      setComposeHeroMode(false);
+                      setMobileDrawerOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition ${
+                      isSelected
+                        ? "bg-white text-zinc-900 shadow-xs ring-1 ring-zinc-200"
+                        : "text-zinc-700 hover:bg-zinc-200/50"
+                    }`}
+                  >
                     {n.status === "processing" ? (
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-blue-400" />
+                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-blue-600" />
                     ) : n.metadata.isCompleted ? (
-                      <Check className="h-3 w-3 shrink-0 text-emerald-400" />
+                      <Check className="h-3 w-3 shrink-0 text-emerald-600" />
                     ) : (
-                      <span className="shrink-0 text-zinc-500">
-                        {renderSpaceIcon(sp?.kind || "custom")}
-                      </span>
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400" />
                     )}
                     <span className="truncate text-xs font-medium">
                       {n.title || n.rawText}
                     </span>
-                  </div>
-                  <div className="flex items-center justify-between pl-4 text-[10px] text-zinc-500">
-                    <span className="truncate">{sp?.name || "Not"}</span>
-                    <span>
-                      {new Date(n.createdAt).toLocaleTimeString("tr-TR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
       </div>
 
       {/* Sidebar Bottom Controls */}
-      <div className="border-t border-zinc-800/80 p-3 flex items-center gap-2">
+      <div className="border-t border-zinc-200/80 p-3 flex items-center gap-2">
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
-          className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-zinc-300 transition hover:bg-zinc-800"
+          className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/60"
         >
-          <Settings className="h-4 w-4 text-blue-400" />
+          <Settings className="h-4 w-4 text-blue-600" />
           <span>Bağlam & AI</span>
         </button>
 
@@ -656,7 +870,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             type="button"
             onClick={() => void handleLogout()}
             title="Kilitle / Çıkış"
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-800"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -666,10 +880,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   );
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#131314] text-zinc-100">
+    <div
+      onClick={() => setOpenMenuNoteId(null)}
+      className="flex h-screen w-full overflow-hidden bg-white text-zinc-900"
+    >
       {/* Desktop Left Sidebar */}
       {sidebarOpen && (
-        <aside className="hidden md:block w-72 shrink-0 border-r border-zinc-800/80">
+        <aside className="hidden md:block w-72 shrink-0 border-r border-zinc-200/80">
           {sidebarContent}
         </aside>
       )}
@@ -678,26 +895,26 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       {mobileDrawerOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            className="fixed inset-0 bg-zinc-950/25 backdrop-blur-xs"
             onClick={() => setMobileDrawerOpen(false)}
           />
-          <aside className="relative z-50 w-72 max-w-[85vw] h-full border-r border-zinc-800 shadow-2xl">
+          <aside className="relative z-50 w-72 max-w-[85vw] h-full border-r border-zinc-200 shadow-2xl">
             {sidebarContent}
           </aside>
         </div>
       )}
 
-      {/* Center Gemini-Style Canvas */}
-      <div className="flex flex-1 flex-col min-w-0 h-full">
-        {/* Top Minimal Header */}
-        <header className="flex items-center justify-between gap-2 px-4 py-3 border-b border-zinc-800/60">
-          <div className="flex items-center gap-2 min-w-0">
+      {/* Center Clean White Canvas */}
+      <div className="flex flex-1 flex-col min-w-0 h-full bg-white">
+        {/* Ultra-minimal Top Header (No bulky category tabs!) */}
+        <header className="flex items-center justify-between gap-2 px-5 py-3.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             {!sidebarOpen && (
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
                 title="Kenar çubuğunu aç"
-                className="hidden md:flex rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+                className="hidden md:flex rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
               >
                 <PanelLeftOpen className="h-4 w-4" />
               </button>
@@ -705,24 +922,24 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="md:hidden rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+              className="md:hidden rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
             >
               <Menu className="h-5 w-5" />
             </button>
 
             <div className="flex items-center gap-2 min-w-0">
               <span
-                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                className={`h-2 w-2 shrink-0 rounded-full ${
                   PROJECT_DOT_COLORS[activeProject.color] ||
                   PROJECT_DOT_COLORS.emerald
                 }`}
               />
-              <h1 className="truncate text-sm font-semibold text-zinc-100">
+              <span className="truncate text-sm font-medium text-zinc-800">
                 {activeProject.name}
-              </h1>
-              {activeProject.description && (
-                <span className="hidden lg:inline truncate max-w-xs text-xs text-zinc-500">
-                  — {activeProject.description}
+              </span>
+              {activeSpace && (
+                <span className="text-xs text-zinc-400">
+                  / {activeSpace.name}
                 </span>
               )}
             </div>
@@ -730,7 +947,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
 
           <div className="flex items-center gap-2 shrink-0">
             {hasProcessingNotes && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-medium text-blue-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-medium text-blue-700">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Ajan işliyor
               </span>
@@ -738,9 +955,9 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-zinc-800 bg-[#1e1f20] px-3 py-1.5 text-xs text-zinc-300 hover:border-zinc-700"
+              className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50"
             >
-              <Sparkles className="h-3.5 w-3.5 text-blue-400" />
+              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
               <span className="hidden sm:inline">
                 {settings?.activeProvider === "openai" ? "OpenAI" : "Gemini"}
               </span>
@@ -748,124 +965,29 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           </div>
         </header>
 
-        {/* Space Filter Pills inside Active Project */}
-        <div className="flex items-center gap-1.5 overflow-x-auto px-4 py-2.5 border-b border-zinc-800/40">
-          <button
-            type="button"
-            onClick={() => {
-              setActiveSpaceTab("all");
-              setFocusedNoteId(null);
-              setComposeHeroMode(false);
-            }}
-            className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
-              activeSpaceTab === "all" && !composeHeroMode
-                ? "bg-zinc-100 text-zinc-950"
-                : "bg-[#1e1f20] text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            <span>Tümü</span>
-            <span className="opacity-70">{projectNotes.length}</span>
-          </button>
-
-          {spaces.map((sp) => {
-            const active = activeSpaceTab === sp.id && !composeHeroMode;
-            const count = countsBySpaceInProject[sp.id] || 0;
-            return (
-              <button
-                key={sp.id}
-                type="button"
-                onClick={() => {
-                  setActiveSpaceTab(sp.id);
-                  setFocusedNoteId(null);
-                  setComposeHeroMode(false);
-                }}
-                className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
-                  active
-                    ? "bg-blue-500 text-zinc-950"
-                    : "bg-[#1e1f20] text-zinc-300 hover:bg-zinc-800"
-                }`}
-              >
-                {renderSpaceIcon(sp.kind)}
-                <span>{sp.name}</span>
-                <span className="opacity-70">{count}</span>
-              </button>
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={() => setAddingSpace((v) => !v)}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-zinc-700 px-2.5 py-1 text-xs text-zinc-400 hover:border-blue-400/50 hover:text-blue-300"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Başlık Aç</span>
-          </button>
-        </div>
-
-        {/* Manual Space Creation Inline Form */}
-        {addingSpace && (
-          <form
-            onSubmit={handleCreateSpace}
-            className="mx-auto mt-3 flex w-full max-w-3xl flex-col gap-2 rounded-2xl border border-zinc-800 bg-[#1e1f20] p-3 sm:flex-row sm:items-center"
-          >
-            <input
-              type="text"
-              autoFocus
-              maxLength={36}
-              value={newSpaceName}
-              onChange={(e) => setNewSpaceName(e.target.value)}
-              placeholder="Yeni başlık adı (örn: Yatırım, Pazarlama)"
-              className="flex-1 rounded-xl border border-zinc-800 bg-[#131314] px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500/50 focus:outline-none"
-            />
-            <input
-              type="text"
-              maxLength={120}
-              value={newSpaceDesc}
-              onChange={(e) => setNewSpaceDesc(e.target.value)}
-              placeholder="AI için kısa ipucu (isteğe bağlı)"
-              className="flex-1 rounded-xl border border-zinc-800 bg-[#131314] px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500/50 focus:outline-none"
-            />
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                className="rounded-xl bg-blue-500 px-3 py-1.5 text-xs font-semibold text-zinc-950 hover:bg-blue-400"
-              >
-                Oluştur
-              </button>
-              <button
-                type="button"
-                onClick={() => setAddingSpace(false)}
-                className="rounded-xl border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-400 hover:bg-zinc-800"
-              >
-                Vazgeç
-              </button>
-            </div>
-          </form>
-        )}
-
         {/* API Key Banner / Toast Error */}
-        <div className="mx-auto w-full max-w-3xl px-4 pt-3 space-y-2">
+        <div className="mx-auto w-full max-w-3xl px-5 space-y-2">
           {settings && !aiConfigured && (
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-left text-xs text-amber-200 hover:bg-amber-500/15"
+              className="flex w-full items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-2.5 text-left text-xs text-amber-900 hover:bg-amber-50"
             >
               <span className="flex items-center gap-2">
-                <KeyRound className="h-4 w-4 shrink-0 text-amber-400" />
+                <KeyRound className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
                   AI özetleme ve sesli not için <strong>Bağlam & AI</strong>{" "}
                   ayarlarından Gemini veya OpenAI API anahtarınızı ekleyin.
                 </span>
               </span>
-              <span className="shrink-0 rounded-lg bg-amber-400/20 px-2.5 py-1 font-semibold">
+              <span className="shrink-0 rounded-full bg-amber-200/70 px-3 py-1 font-semibold text-amber-900">
                 Ekle →
               </span>
             </button>
           )}
 
           {toastError && (
-            <div className="flex items-center justify-between rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-xs text-rose-200">
+            <div className="flex items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-800">
               <span>{toastError}</span>
               <button type="button" onClick={() => setToastError(null)}>
                 <X className="h-3.5 w-3.5" />
@@ -877,13 +999,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         {/* Center Main Content */}
         {showCenteredHero ? (
           /* Gemini-style Centered Hero Prompt Screen */
-          <main className="flex flex-1 flex-col items-center justify-center px-4 pb-12">
-            <div className="w-full max-w-2xl space-y-6">
+          <main className="flex flex-1 flex-col items-center justify-center px-5 pb-14">
+            <div className="w-full max-w-2xl space-y-7">
               <div className="text-center space-y-2">
-                <h2 className="bg-gradient-to-r from-blue-400 via-emerald-300 to-indigo-300 bg-clip-text text-3xl sm:text-4xl font-semibold tracking-tight text-transparent">
+                <h2 className="font-editorial text-4xl sm:text-5xl tracking-tight text-zinc-900">
                   {activeProject.name}
                 </h2>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-zinc-500 max-w-md mx-auto">
                   {activeProject.description ||
                     "Aklına geleni tek kelimeyle yaz veya sesle bırak — arka plandaki ajan araştırıp düzenlesin."}
                 </p>
@@ -904,7 +1026,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   <button
                     type="button"
                     onClick={() => setComposeHeroMode(false)}
-                    className="text-xs text-zinc-400 hover:text-zinc-200 underline underline-offset-4"
+                    className="text-xs text-zinc-500 hover:text-zinc-900 underline underline-offset-4"
                   >
                     Bu projedeki {projectNotes.length} nota dön
                   </button>
@@ -912,438 +1034,463 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
               )}
             </div>
           </main>
-        ) : (
-          /* Notes Stream + Docked Gemini-style Bottom Prompt Bar */
+        ) : focusedNote ? (
+          /* Distraction-Free Focused Note Reading View (No heavy card!) */
           <>
-            <main className="flex-1 overflow-y-auto px-4 py-4">
-              <div className="mx-auto w-full max-w-3xl space-y-3">
-                {focusedNoteId && (
+            <main className="flex-1 overflow-y-auto px-5 py-6">
+              <div className="mx-auto w-full max-w-2xl space-y-6">
+                <div className="flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => setFocusedNoteId(null)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#1e1f20] px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
                   >
                     <ArrowLeft className="h-3.5 w-3.5" />
-                    <span>Tüm {activeProject.name} Notları</span>
+                    <span>{activeProject.name} notlarına dön</span>
                   </button>
-                )}
+                  {renderNoteActionsMenu(focusedNote)}
+                </div>
 
-                {activeSpace && !activeSpace.isSystem && !focusedNoteId && (
-                  <div className="flex items-center justify-between rounded-xl border border-zinc-800/60 bg-[#1e1f20]/70 px-3.5 py-2 text-xs text-zinc-400">
-                    <span>
-                      Özel Başlık:{" "}
-                      <strong className="text-zinc-200">
-                        {activeSpace.name}
-                      </strong>
+                {focusedNote.suggestedSpace && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-indigo-50/80 px-4 py-2.5 text-xs text-indigo-900">
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                      <span>
+                        AI Önerisi: Bu not için{" "}
+                        <strong>&ldquo;{focusedNote.suggestedSpace}&rdquo;</strong>{" "}
+                        başlığı açılsın mı?
+                      </span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => void handleDeleteCustomSpace(activeSpace.id)}
-                      className="text-rose-400 hover:underline"
-                    >
-                      Başlığı Sil
-                    </button>
-                  </div>
-                )}
-
-                {loading ? (
-                  <div className="flex items-center justify-center py-16 text-zinc-500">
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  </div>
-                ) : centerNotes.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-zinc-800 py-12 text-center text-xs text-zinc-500">
-                    Bu filtrede henüz not bulunmuyor. Aşağıdaki kutudan
-                    ekleyebilirsiniz.
-                  </div>
-                ) : activeSpace?.kind === "resources" && !focusedNoteId ? (
-                  /* Structured Table View for Araçlar & Kaynaklar */
-                  <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-[#1e1f20]/70">
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-zinc-800 bg-[#1e1f20] text-[11px] uppercase tracking-wider text-zinc-400">
-                            <th className="py-3 pl-4 pr-3 font-medium">
-                              Araç / Kaynak
-                            </th>
-                            <th className="px-3 py-3 font-medium">Kategori</th>
-                            <th className="px-3 py-3 font-medium">
-                              Özet & Proje Kullanımı
-                            </th>
-                            <th className="py-3 pl-3 pr-4 text-right font-medium">
-                              İşlem
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-800/70">
-                          {centerNotes.map((note) => (
-                            <tr
-                              key={note.id}
-                              className="transition hover:bg-zinc-800/40"
-                            >
-                              <td className="align-top py-3.5 pl-4 pr-3 sm:w-48">
-                                <div className="flex items-center gap-1.5 font-semibold text-zinc-100 text-sm">
-                                  <span>{note.title}</span>
-                                  {note.metadata.officialUrl && (
-                                    <a
-                                      href={note.metadata.officialUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="text-blue-400 hover:text-blue-300"
-                                    >
-                                      <ExternalLink className="h-3.5 w-3.5" />
-                                    </a>
-                                  )}
-                                </div>
-                                <div className="mt-1 text-[11px] text-zinc-500">
-                                  &ldquo;{note.rawText}&rdquo;
-                                </div>
-                              </td>
-                              <td className="align-top px-3 py-3.5 sm:w-36">
-                                {note.metadata.categoryTag && (
-                                  <span className="inline-block rounded-lg border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[11px] text-blue-300">
-                                    {note.metadata.categoryTag}
-                                  </span>
-                                )}
-                                {note.metadata.pricingHint && (
-                                  <div className="mt-1 text-[11px] text-zinc-400">
-                                    {note.metadata.pricingHint}
-                                  </div>
-                                )}
-                              </td>
-                              <td className="align-top px-3 py-3.5">
-                                {note.status === "processing" ? (
-                                  <span className="inline-flex items-center gap-1.5 text-blue-300">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    Araştırılıyor...
-                                  </span>
-                                ) : (
-                                  <>
-                                    <p className="text-zinc-200 leading-relaxed">
-                                      {note.summary}
-                                    </p>
-                                    {note.metadata.projectUseCase && (
-                                      <p className="mt-1.5 rounded-lg border border-zinc-800 bg-[#131314] px-2.5 py-1.5 text-[11px] text-emerald-300/90">
-                                        <strong>Senin için:</strong>{" "}
-                                        {note.metadata.projectUseCase}
-                                      </p>
-                                    )}
-                                  </>
-                                )}
-                              </td>
-                              <td className="align-top py-3.5 pl-3 pr-4 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      void handlePatchNote(note.id, {
-                                        action: "reprocess",
-                                      })
-                                    }
-                                    title="Yeniden Araştır"
-                                    className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                                  >
-                                    <RefreshCw className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      void handleDeleteNote(note.id)
-                                    }
-                                    title="Sil"
-                                    className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-rose-400"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void handleAcceptSuggestedSpace(
+                            focusedNote.id,
+                            focusedNote.suggestedSpace!
+                          )
+                        }
+                        className="rounded-full bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
+                      >
+                        + Aç ve Taşı
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void handlePatchNote(focusedNote.id, {
+                            dismissSuggestion: true,
+                          })
+                        }
+                        className="text-[11px] text-indigo-700 hover:underline"
+                      >
+                        Yoksay
+                      </button>
                     </div>
                   </div>
-                ) : (
-                  /* Conversational / Card Stream in the Center Column */
-                  centerNotes.map((note) => {
-                    const sp = spaceMap.get(note.spaceId);
-                    const isTaskSpace = sp?.kind === "tasks";
-                    const isDone = Boolean(note.metadata.isCompleted);
+                )}
 
-                    return (
-                      <article
-                        key={note.id}
-                        className={`rounded-2xl border p-4 transition ${
-                          note.status === "processing"
-                            ? "border-blue-500/40 bg-[#1e1f20] animate-pulse"
-                            : "border-zinc-800/90 bg-[#1e1f20]/75 hover:border-zinc-700"
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                    <span>
+                      {spaceMap.get(focusedNote.spaceId)?.name || "Not"}
+                    </span>
+                    {focusedNote.metadata.categoryTag && (
+                      <>
+                        <span>•</span>
+                        <span className="text-blue-700 font-medium">
+                          {focusedNote.metadata.categoryTag}
+                        </span>
+                      </>
+                    )}
+                    {focusedNote.metadata.dueDate && (
+                      <>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1 text-amber-700">
+                          <Calendar className="h-3 w-3" />
+                          {focusedNote.metadata.dueDate}
+                        </span>
+                      </>
+                    )}
+                    {focusedNote.inputType === "voice" && (
+                      <>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Mic className="h-3 w-3 text-blue-600" />
+                          Sesli not
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    {spaceMap.get(focusedNote.spaceId)?.kind === "tasks" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void handlePatchNote(focusedNote.id, {
+                            toggleCompleted: true,
+                          })
+                        }
+                        className={`mt-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                          focusedNote.metadata.isCompleted
+                            ? "border-emerald-600 bg-emerald-600 text-white"
+                            : "border-zinc-300 bg-white hover:border-emerald-600"
                         }`}
                       >
-                        {note.suggestedSpace && (
-                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-200">
-                            <span className="flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                              <span>
-                                AI Önerisi: Bu not için{" "}
-                                <strong>
-                                  &ldquo;{note.suggestedSpace}&rdquo;
-                                </strong>{" "}
-                                başlığı açılsın mı?
-                              </span>
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handleAcceptSuggestedSpace(
-                                    note.id,
-                                    note.suggestedSpace!
-                                  )
-                                }
-                                className="rounded-lg bg-indigo-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-400"
-                              >
-                                + Aç ve Taşı
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handlePatchNote(note.id, {
-                                    dismissSuggestion: true,
-                                  })
-                                }
-                                className="text-[11px] text-indigo-300/80 hover:underline"
-                              >
-                                Yoksay
-                              </button>
-                            </div>
-                          </div>
+                        {focusedNote.metadata.isCompleted && (
+                          <Check className="h-3.5 w-3.5" />
                         )}
+                      </button>
+                    )}
 
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex flex-1 items-start gap-3">
-                            {isTaskSpace && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handlePatchNote(note.id, {
-                                    toggleCompleted: true,
-                                  })
-                                }
-                                className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                                  isDone
-                                    ? "border-emerald-500 bg-emerald-500 text-zinc-950"
-                                    : "border-zinc-600 bg-[#131314] hover:border-emerald-500"
+                    <h1
+                      className={`font-editorial text-3xl sm:text-4xl leading-tight ${
+                        focusedNote.metadata.isCompleted
+                          ? "line-through text-zinc-400"
+                          : "text-zinc-900"
+                      }`}
+                    >
+                      {focusedNote.title}
+                    </h1>
+                  </div>
+
+                  <p className="text-[15px] leading-relaxed text-zinc-700">
+                    {focusedNote.status === "processing" ? (
+                      <span className="inline-flex items-center gap-2 text-blue-600">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {focusedNote.summary}
+                      </span>
+                    ) : (
+                      focusedNote.summary
+                    )}
+                  </p>
+
+                  {focusedNote.metadata.officialUrl && (
+                    <a
+                      href={focusedNote.metadata.officialUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span>{focusedNote.metadata.officialUrl}</span>
+                    </a>
+                  )}
+
+                  {focusedNote.metadata.projectUseCase && (
+                    <div className="border-l-2 border-emerald-500 pl-4 py-1 text-sm text-zinc-700">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">
+                        Projendeki Kullanımı
+                      </span>
+                      {focusedNote.metadata.projectUseCase}
+                    </div>
+                  )}
+
+                  {focusedNote.metadata.nextStep && (
+                    <div className="border-l-2 border-blue-500 pl-4 py-1 text-sm text-zinc-700">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">
+                        İlk Adım
+                      </span>
+                      {focusedNote.metadata.nextStep}
+                    </div>
+                  )}
+
+                  {focusedNote.metadata.subtasks &&
+                    focusedNote.metadata.subtasks.length > 0 && (
+                      <div className="pt-2 space-y-2">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                          Alt Adımlar
+                        </div>
+                        <ul className="divide-y divide-zinc-100">
+                          {focusedNote.metadata.subtasks.map((st) => (
+                            <li
+                              key={st.id}
+                              onClick={() =>
+                                void handlePatchNote(focusedNote.id, {
+                                  toggleSubtaskId: st.id,
+                                })
+                              }
+                              className="flex cursor-pointer items-center gap-3 py-2.5 text-sm text-zinc-700 hover:text-zinc-950"
+                            >
+                              <span
+                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                  st.done
+                                    ? "border-emerald-600 bg-emerald-600 text-white"
+                                    : "border-zinc-300"
                                 }`}
                               >
-                                {isDone && <Check className="h-3.5 w-3.5" />}
-                              </button>
-                            )}
+                                {st.done && <Check className="h-3 w-3" />}
+                              </span>
+                              <span
+                                className={
+                                  st.done ? "line-through text-zinc-400" : ""
+                                }
+                              >
+                                {st.text}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3
-                                  className={`text-sm font-semibold ${
-                                    isDone
-                                      ? "line-through text-zinc-500"
-                                      : "text-zinc-100"
-                                  }`}
-                                >
-                                  {note.title}
-                                </h3>
+                  <div className="border-t border-zinc-100 pt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
+                    <span>Ham girdi: &ldquo;{focusedNote.rawText}&rdquo;</span>
+                    <div className="flex items-center gap-2">
+                      {(focusedNote.metadata.tags || []).map((t) => (
+                        <span key={t} className="font-mono text-[11px]">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
 
-                                {sp && (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#131314] px-2.5 py-0.5 text-[11px] text-zinc-300 border border-zinc-800">
-                                    {renderSpaceIcon(sp.kind)}
-                                    <span>{sp.name}</span>
-                                  </span>
-                                )}
-
-                                {note.inputType === "voice" && (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300">
-                                    <Mic className="h-2.5 w-2.5 text-blue-400" />
-                                    Sesli
-                                  </span>
-                                )}
-
-                                {note.metadata.categoryTag && (
-                                  <span className="rounded-full border border-blue-500/25 bg-blue-500/10 px-2 py-0.5 text-[11px] text-blue-300">
-                                    {note.metadata.categoryTag}
-                                  </span>
-                                )}
-
-                                {note.metadata.dueDate && (
-                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">
-                                    <Calendar className="h-3 w-3" />
-                                    {note.metadata.dueDate}
-                                  </span>
-                                )}
-
+            <div className="px-5 pb-5 pt-2 bg-gradient-to-t from-white via-white to-transparent">
+              <div className="mx-auto w-full max-w-2xl">
+                <CaptureBar
+                  activeProjectId={activeProject.id}
+                  activeProjectName={activeProject.name}
+                  onNoteCreated={(newNote) => {
+                    setNotes((prev) => [newNote, ...prev]);
+                    setFocusedNoteId(newNote.id);
+                  }}
+                  onError={(msg) => setToastError(msg)}
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Clean Editorial List / Table Stream (No chunky cards!) */
+          <>
+            <main className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="mx-auto w-full max-w-3xl">
+                {loading ? (
+                  <div className="flex items-center justify-center py-16 text-zinc-400">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : filteredNotes.length === 0 ? (
+                  <div className="py-16 text-center text-sm text-zinc-400">
+                    Bu başlıkta henüz not yok. Aşağıdaki kutudan ekleyebilirsiniz.
+                  </div>
+                ) : activeSpace?.kind === "resources" ? (
+                  /* Clean Minimalist White Table for Araçlar & Kaynaklar */
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-zinc-200 text-[11px] uppercase tracking-wider text-zinc-400">
+                          <th className="py-3 pr-4 font-medium">Araç / Kaynak</th>
+                          <th className="px-3 py-3 font-medium">Kategori</th>
+                          <th className="px-3 py-3 font-medium">
+                            Özet & Proje Kullanımı
+                          </th>
+                          <th className="py-3 pl-3 text-right font-medium" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {filteredNotes.map((note) => (
+                          <tr
+                            key={note.id}
+                            onClick={() => setFocusedNoteId(note.id)}
+                            className="group cursor-pointer transition hover:bg-zinc-50/80"
+                          >
+                            <td className="align-top py-4 pr-4 sm:w-44">
+                              <div className="flex items-center gap-1.5 font-semibold text-zinc-900 text-sm">
+                                <span>{note.title}</span>
                                 {note.metadata.officialUrl && (
                                   <a
                                     href={note.metadata.officialUrl}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-blue-600 hover:text-blue-700"
                                   >
-                                    <ExternalLink className="h-3 w-3" />
-                                    <span>Site</span>
+                                    <ExternalLink className="h-3.5 w-3.5" />
                                   </a>
                                 )}
                               </div>
-
-                              <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-300">
-                                {note.status === "processing" ? (
-                                  <span className="inline-flex items-center gap-1.5 text-blue-300">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    {note.summary}
-                                  </span>
-                                ) : (
-                                  note.summary
-                                )}
-                              </p>
-
-                              {note.metadata.projectUseCase && (
-                                <p className="mt-2 rounded-xl border border-zinc-800 bg-[#131314] px-3 py-2 text-xs text-emerald-300/90">
-                                  <strong>Projendeki Kullanımı:</strong>{" "}
-                                  {note.metadata.projectUseCase}
-                                </p>
-                              )}
-
-                              {note.metadata.nextStep && (
-                                <p className="mt-2 rounded-xl border border-zinc-800 bg-[#131314] px-3 py-2 text-xs text-zinc-300">
-                                  <strong className="text-blue-400">
-                                    İlk Adım:
-                                  </strong>{" "}
-                                  {note.metadata.nextStep}
-                                </p>
-                              )}
-
-                              {note.metadata.subtasks &&
-                                note.metadata.subtasks.length > 0 && (
-                                  <ul className="mt-2.5 space-y-1.5 rounded-xl border border-zinc-800/80 bg-[#131314] p-2.5">
-                                    {note.metadata.subtasks.map((st) => (
-                                      <li
-                                        key={st.id}
-                                        onClick={() =>
-                                          void handlePatchNote(note.id, {
-                                            toggleSubtaskId: st.id,
-                                          })
-                                        }
-                                        className="flex cursor-pointer items-center gap-2 text-xs text-zinc-300 hover:text-zinc-100"
-                                      >
-                                        <span
-                                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                            st.done
-                                              ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
-                                              : "border-zinc-700"
-                                          }`}
-                                        >
-                                          {st.done && (
-                                            <Check className="h-3 w-3" />
-                                          )}
-                                        </span>
-                                        <span
-                                          className={
-                                            st.done
-                                              ? "line-through text-zinc-500"
-                                              : ""
-                                          }
-                                        >
-                                          {st.text}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-
-                              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
-                                <span>
-                                  Ham not: &ldquo;{note.rawText}&rdquo;
+                            </td>
+                            <td className="align-top px-3 py-4 sm:w-36">
+                              {note.metadata.categoryTag && (
+                                <span className="inline-block rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700">
+                                  {note.metadata.categoryTag}
                                 </span>
-                                <div className="flex items-center gap-1.5">
-                                  {(note.metadata.tags || []).map((t) => (
-                                    <span
-                                      key={t}
-                                      className="rounded-md bg-[#131314] px-1.5 py-0.5 text-[10px] text-zinc-400"
-                                    >
-                                      #{t}
-                                    </span>
-                                  ))}
-                                </div>
+                              )}
+                            </td>
+                            <td className="align-top px-3 py-4">
+                              {note.status === "processing" ? (
+                                <span className="inline-flex items-center gap-1.5 text-blue-600">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  Araştırılıyor...
+                                </span>
+                              ) : (
+                                <>
+                                  <p className="text-zinc-700 leading-relaxed">
+                                    {note.summary}
+                                  </p>
+                                  {note.metadata.projectUseCase && (
+                                    <p className="mt-1 text-[11px] text-emerald-700">
+                                      <strong>Senin için:</strong>{" "}
+                                      {note.metadata.projectUseCase}
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </td>
+                            <td className="align-top py-4 pl-3 text-right">
+                              {renderNoteActionsMenu(note)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  /* Borderless Editorial Rows (Hairline separated, click to focus) */
+                  <div className="divide-y divide-zinc-100">
+                    {filteredNotes.map((note) => {
+                      const sp = spaceMap.get(note.spaceId);
+                      const isTaskSpace = sp?.kind === "tasks";
+                      const isDone = Boolean(note.metadata.isCompleted);
+
+                      return (
+                        <article
+                          key={note.id}
+                          onClick={() => setFocusedNoteId(note.id)}
+                          className="group cursor-pointer py-4 transition hover:bg-zinc-50/70 -mx-3 px-3 rounded-2xl"
+                        >
+                          {note.suggestedSpace && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="mb-2.5 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-indigo-50/80 px-3 py-1.5 text-xs text-indigo-900"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                                <span>
+                                  Öneri:{" "}
+                                  <strong>
+                                    &ldquo;{note.suggestedSpace}&rdquo;
+                                  </strong>{" "}
+                                  başlığı açılsın mı?
+                                </span>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleAcceptSuggestedSpace(
+                                      note.id,
+                                      note.suggestedSpace!
+                                    )
+                                  }
+                                  className="rounded-full bg-indigo-600 px-2.5 py-0.5 text-[11px] font-medium text-white"
+                                >
+                                  + Aç
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handlePatchNote(note.id, {
+                                      dismissSuggestion: true,
+                                    })
+                                  }
+                                  className="text-[11px] text-indigo-700 hover:underline"
+                                >
+                                  Yoksay
+                                </button>
                               </div>
                             </div>
-                          </div>
+                          )}
 
-                          {/* Move between Spaces / Projects & Actions */}
-                          <div className="flex shrink-0 flex-col sm:flex-row items-end sm:items-center gap-1">
-                            {projects.length > 1 && (
-                              <select
-                                value={note.projectId}
-                                onChange={(e) =>
-                                  void handlePatchNote(note.id, {
-                                    projectId: e.target.value,
-                                  })
-                                }
-                                title="Başka projeye taşı"
-                                className="rounded-lg border border-zinc-800 bg-[#131314] px-2 py-1 text-[11px] text-zinc-300 focus:outline-none"
-                              >
-                                {projects.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-1 items-start gap-3 min-w-0">
+                              {isTaskSpace && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handlePatchNote(note.id, {
+                                      toggleCompleted: true,
+                                    });
+                                  }}
+                                  className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                                    isDone
+                                      ? "border-emerald-600 bg-emerald-600 text-white"
+                                      : "border-zinc-300 bg-white hover:border-emerald-600"
+                                  }`}
+                                >
+                                  {isDone && <Check className="h-3 w-3" />}
+                                </button>
+                              )}
 
-                            <select
-                              value={note.spaceId}
-                              onChange={(e) =>
-                                void handlePatchNote(note.id, {
-                                  spaceId: e.target.value,
-                                })
-                              }
-                              title="Başka başlığa taşı"
-                              className="rounded-lg border border-zinc-800 bg-[#131314] px-2 py-1 text-[11px] text-zinc-300 focus:outline-none"
-                            >
-                              {spaces.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                            </select>
+                              <div className="flex-1 min-w-0 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3
+                                    className={`text-[15px] font-semibold ${
+                                      isDone
+                                        ? "line-through text-zinc-400"
+                                        : "text-zinc-900"
+                                    }`}
+                                  >
+                                    {note.title}
+                                  </h3>
 
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void handlePatchNote(note.id, {
-                                    action: "reprocess",
-                                  })
-                                }
-                                title="Yeniden Analiz Et"
-                                className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
-                              >
-                                <RefreshCw className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void handleDeleteNote(note.id)}
-                                title="Sil"
-                                className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-rose-400"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                                  {sp && (
+                                    <span className="text-[11px] font-medium text-zinc-400">
+                                      • {sp.name}
+                                    </span>
+                                  )}
+
+                                  {note.metadata.dueDate && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-amber-700">
+                                      <Calendar className="h-3 w-3" />
+                                      {note.metadata.dueDate}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="text-[13px] leading-relaxed text-zinc-600 line-clamp-2">
+                                  {note.status === "processing" ? (
+                                    <span className="inline-flex items-center gap-1.5 text-blue-600">
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      {note.summary}
+                                    </span>
+                                  ) : (
+                                    note.summary
+                                  )}
+                                </p>
+
+                                {note.metadata.subtasks &&
+                                  note.metadata.subtasks.length > 0 && (
+                                    <div className="pt-1 text-[11px] text-zinc-400">
+                                      {
+                                        note.metadata.subtasks.filter(
+                                          (s) => s.done
+                                        ).length
+                                      }
+                                      /{note.metadata.subtasks.length} alt adım
+                                      tamamlandı
+                                    </div>
+                                  )}
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 opacity-70 group-hover:opacity-100">
+                              {renderNoteActionsMenu(note)}
                             </div>
                           </div>
-                        </div>
-                      </article>
-                    );
-                  })
+                        </article>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </main>
 
             {/* Docked Gemini-style Center Prompt Box */}
-            <div className="px-4 pb-4 pt-2 bg-gradient-to-t from-[#131314] via-[#131314] to-transparent">
+            <div className="px-5 pb-5 pt-2 bg-gradient-to-t from-white via-white to-transparent">
               <div className="mx-auto w-full max-w-3xl">
                 <CaptureBar
                   activeProjectId={activeProject.id}

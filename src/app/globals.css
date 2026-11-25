@@ -1,15 +1,22 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  background-color: #ffffff;
+  color: #18181b;
 }
 
-/* Subtle custom scrollbar */
+.font-editorial {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+/* Minimal light scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -18,9 +25,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #e4e4e7;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #d4d4d8;
 }

@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Yaz ve çık: Yarım notları ve ses kayıtlarını otomatik anlamlandıran minimalist AI not ajanı.",
     start_url: "/",
     display: "standalone",
-    background_color: "#09090b",
-    theme_color: "#09090b",
+    background_color: "#ffffff",
+    theme_color: "#ffffff",
     orientation: "portrait",
     icons: [
       {
