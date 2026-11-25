@@ -1,0 +1,82 @@
+import { NextResponse } from "next/server";
+import { asc, desc, eq, gte, sql } from "drizzle-orm";
+import { ensureDbReady } from "@/db";
+import { appSettings, notes, spaces } from "@/db/schema";
+import { isAuthenticated, isPasswordProtectionEnabled } from "@/lib/auth";
+import { decryptSecret, maskApiKey } from "@/lib/crypto";
+import {
+  serializeNote,
+  serializeSpace,
+  type ClientSettings,
+  type UsageStats,
+} from "@/lib/serializers";
+
+export async function GET() {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const db = await ensureDbReady();
+
+  const [spaceRows, noteRows, settingsRows] = await Promise.all([
+    db.select().from(spaces).orderBy(asc(spaces.position), asc(spaces.createdAt)),
+    db.select().from(notes).orderBy(desc(notes.createdAt)).limit(250),
+    db.select().from(appSettings).where(eq(appSettings.id, "owner")),
+  ]);
+
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const spendRows = await db
+    .select({
+      usedByok: notes.usedByok,
+      total: sql<number>`COALESCE(SUM(${notes.costUsd}), 0)`,
+    })
+    .from(notes)
+    .where(gte(notes.createdAt, monthStart))
+    .groupBy(notes.usedByok);
+
+  let monthlySystemSpendUsd = 0;
+  let monthlyByokSpendUsd = 0;
+  for (const row of spendRows) {
+    if (row.usedByok) {
+      monthlyByokSpendUsd += Number(row.total);
+    } else {
+      monthlySystemSpendUsd += Number(row.total);
+    }
+  }
+
+  const cfg = settingsRows[0];
+  const rawGemini = decryptSecret(cfg?.encryptedGeminiKey);
+  const rawOpenai = decryptSecret(cfg?.encryptedOpenaiKey);
+  const hasSystemKey = Boolean(
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
+      process.env.OPENAI_API_KEY?.trim()
+  );
+
+  const settings: ClientSettings = {
+    userContext: cfg?.userContext || "",
+    activeProvider: cfg?.activeProvider || "gemini",
+    preferByok: cfg?.preferByok ?? true,
+    hasGeminiByok: Boolean(rawGemini),
+    maskedGeminiKey: maskApiKey(rawGemini),
+    hasOpenaiByok: Boolean(rawOpenai),
+    maskedOpenaiKey: maskApiKey(rawOpenai),
+    hasSystemKey,
+    monthlySystemBudgetUsd: cfg?.monthlySystemBudgetUsd ?? 2.0,
+    passwordProtectionEnabled: isPasswordProtectionEnabled(),
+  };
+
+  const usageStats: UsageStats = {
+    monthlySystemSpendUsd: Number(monthlySystemSpendUsd.toFixed(4)),
+    monthlyByokSpendUsd: Number(monthlyByokSpendUsd.toFixed(4)),
+    totalNotesCount: noteRows.length,
+  };
+
+  return NextResponse.json({
+    spaces: spaceRows.map(serializeSpace),
+    notes: noteRows.map(serializeNote),
+    settings,
+    usageStats,
+  });
+}
