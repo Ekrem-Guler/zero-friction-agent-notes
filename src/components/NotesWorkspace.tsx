@@ -32,6 +32,7 @@ import {
   MessageSquare,
   CornerDownRight,
   ChevronRight,
+  ArrowUpRight,
 } from "lucide-react";
 import type {
   ClientNote,
@@ -208,6 +209,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const countsByProject = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const n of notes) {
+      if (n.parentId && !n.metadata.promotedToSpace) continue;
       const pid = n.projectId || "default";
       counts[pid] = (counts[pid] || 0) + 1;
     }
@@ -219,17 +221,25 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     [notes, activeProject.id]
   );
 
+  const visibleProjectNotes = useMemo(
+    () =>
+      projectNotes.filter(
+        (n) => !n.parentId || Boolean(n.metadata.promotedToSpace)
+      ),
+    [projectNotes]
+  );
+
   const countsBySpaceInProject = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const n of projectNotes) {
+    for (const n of visibleProjectNotes) {
       counts[n.spaceId] = (counts[n.spaceId] || 0) + 1;
     }
     return counts;
-  }, [projectNotes]);
+  }, [visibleProjectNotes]);
 
   const filteredNotes = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return projectNotes.filter((n) => {
+    return visibleProjectNotes.filter((n) => {
       if (activeSpaceTab !== "all" && n.spaceId !== activeSpaceTab) return false;
       if (!q) return true;
       return (
@@ -240,7 +250,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         (n.metadata.tags || []).some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [projectNotes, activeSpaceTab, searchQuery]);
+  }, [visibleProjectNotes, activeSpaceTab, searchQuery]);
 
   const focusedNote = useMemo(
     () =>
@@ -284,15 +294,6 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       .filter((n) => n.parentId === focusedNote.id)
       .sort((a, b) => a.createdAt - b.createdAt);
   }, [focusedNote, projectNotes]);
-
-  const focusedChildrenGrouped = useMemo(() => {
-    return spaces
-      .map((sp) => ({
-        space: sp,
-        items: focusedChildren.filter((c) => c.spaceId === sp.id),
-      }))
-      .filter((g) => g.items.length > 0);
-  }, [spaces, focusedChildren]);
 
   const groupedSections = useMemo(() => {
     const targetSpaces =
@@ -565,6 +566,25 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             )}
 
             <div className="border-t border-zinc-100 pt-1 space-y-0.5">
+              {note.parentId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenuNoteId(null);
+                    void handlePatchNote(note.id, {
+                      togglePromotedToSpace: true,
+                    });
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-blue-700 hover:bg-blue-50 font-medium"
+                >
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  <span>
+                    {note.metadata.promotedToSpace
+                      ? "Sadece Yorum Olarak Tut"
+                      : "Ayrı Not Yap"}
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -828,7 +848,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             >
               <span>Tümü</span>
               <span className="text-[11px] text-zinc-400">
-                {projectNotes.length}
+                {visibleProjectNotes.length}
               </span>
             </button>
 
@@ -1190,6 +1210,33 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                     ))}
                   </nav>
                   <div className="flex items-center gap-1.5">
+                    {focusedNote.parentId && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void handlePatchNote(focusedNote.id, {
+                            togglePromotedToSpace: true,
+                          })
+                        }
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                          focusedNote.metadata.promotedToSpace
+                            ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                        }`}
+                      >
+                        {focusedNote.metadata.promotedToSpace ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Ayrı Not</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowUpRight className="h-3.5 w-3.5" />
+                            <span>Ayrı Not Yap</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
@@ -1442,110 +1489,117 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
 
                   {focusedChildren.length === 0 ? (
                     <p className="text-xs text-zinc-400">
-                      Bu notun altına henüz yorum veya alt not eklenmemiş.
-                      Aşağıdaki kutudan doğrudan ekleyebilir, istersen ayrı bir
-                      başlık altında toplayabilirsin.
+                      Bu notun altına henüz yorum eklenmemiş. Aşağıdaki kutudan
+                      yorum ekleyebilir, istersen sonradan &ldquo;Ayrı not
+                      yap&rdquo; ile ana listeye çıkarabilirsin.
                     </p>
                   ) : (
-                    <div className="space-y-5">
-                      {focusedChildrenGrouped.map(({ space: sp, items }) => {
-                        const isChildTask = sp.kind === "tasks";
+                    <div className="divide-y divide-zinc-100 border-l-2 border-zinc-200 pl-3.5">
+                      {focusedChildren.map((child) => {
+                        const childSpace = spaceMap.get(child.spaceId);
+                        const isChildTask = childSpace?.kind === "tasks";
+                        const childDone = Boolean(child.metadata.isCompleted);
+                        const childRaw =
+                          viewMode === "raw" ||
+                          Boolean(child.metadata.showRawOnly);
+                        const isPromoted = Boolean(
+                          child.metadata.promotedToSpace
+                        );
+                        const grandChildCount =
+                          childCountsByNoteId[child.id] || 0;
+
                         return (
-                          <div key={sp.id} className="space-y-1">
-                            <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400 pb-1">
-                              <span>{renderSpaceIcon(sp.kind)}</span>
-                              <span>{sp.name}</span>
-                              <span className="font-mono font-normal">
-                                ({items.length})
-                              </span>
-                            </div>
-                            <div className="divide-y divide-zinc-100 border-l-2 border-zinc-200 pl-3">
-                              {items.map((child) => {
-                                const childDone = Boolean(
-                                  child.metadata.isCompleted
-                                );
-                                const childRaw =
-                                  viewMode === "raw" ||
-                                  Boolean(child.metadata.showRawOnly);
-                                const grandChildCount =
-                                  childCountsByNoteId[child.id] || 0;
+                          <div
+                            key={child.id}
+                            onClick={() => setFocusedNoteId(child.id)}
+                            className="group flex cursor-pointer items-center justify-between gap-2 py-2.5 px-2 -mx-2 rounded-xl transition hover:bg-zinc-50"
+                          >
+                            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                              {isChildTask ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handlePatchNote(child.id, {
+                                      toggleCompleted: true,
+                                    });
+                                  }}
+                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                                    childDone
+                                      ? "border-emerald-600 bg-emerald-600 text-white"
+                                      : "border-zinc-300 bg-white hover:border-emerald-600"
+                                  }`}
+                                >
+                                  {childDone && <Check className="h-3 w-3" />}
+                                </button>
+                              ) : (
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300 group-hover:bg-blue-500" />
+                              )}
 
-                                return (
-                                  <div
-                                    key={child.id}
-                                    onClick={() => setFocusedNoteId(child.id)}
-                                    className="group flex cursor-pointer items-center justify-between gap-2 py-2.5 px-2 -mx-2 rounded-xl transition hover:bg-zinc-50"
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`truncate text-sm font-medium ${
+                                      childDone
+                                        ? "line-through text-zinc-400"
+                                        : "text-zinc-900"
+                                    }`}
                                   >
-                                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                                      {isChildTask ? (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            void handlePatchNote(child.id, {
-                                              toggleCompleted: true,
-                                            });
-                                          }}
-                                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
-                                            childDone
-                                              ? "border-emerald-600 bg-emerald-600 text-white"
-                                              : "border-zinc-300 bg-white hover:border-emerald-600"
-                                          }`}
-                                        >
-                                          {childDone && (
-                                            <Check className="h-3 w-3" />
-                                          )}
-                                        </button>
-                                      ) : (
-                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300 group-hover:bg-blue-500" />
-                                      )}
+                                    {childRaw
+                                      ? child.rawText
+                                      : child.title || child.rawText}
+                                  </span>
 
-                                      <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <span
-                                            className={`truncate text-sm font-medium ${
-                                              childDone
-                                                ? "line-through text-zinc-400"
-                                                : "text-zinc-900"
-                                            }`}
-                                          >
-                                            {childRaw
-                                              ? child.rawText
-                                              : child.title || child.rawText}
-                                          </span>
+                                  {isPromoted && childSpace && (
+                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                                      <Check className="h-2.5 w-2.5" />
+                                      <span>{childSpace.name}</span>
+                                    </span>
+                                  )}
 
-                                          {grandChildCount > 0 && (
-                                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">
-                                              <MessageSquare className="h-2.5 w-2.5" />
-                                              {grandChildCount}
-                                            </span>
-                                          )}
+                                  {grandChildCount > 0 && (
+                                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">
+                                      <MessageSquare className="h-2.5 w-2.5" />
+                                      {grandChildCount}
+                                    </span>
+                                  )}
 
-                                          {!childRaw &&
-                                            child.status === "processing" && (
-                                              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
-                                            )}
-                                        </div>
+                                  {!childRaw &&
+                                    child.status === "processing" && (
+                                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
+                                    )}
+                                </div>
 
-                                        {!childRaw &&
-                                          viewMode === "ai" &&
-                                          child.status !== "processing" &&
-                                          child.summary && (
-                                            <p className="truncate text-xs text-zinc-500 mt-0.5">
-                                              {renderHighlightedText(
-                                                child.summary
-                                              )}
-                                            </p>
-                                          )}
-                                      </div>
-                                    </div>
+                                {!childRaw &&
+                                  viewMode === "ai" &&
+                                  child.status !== "processing" &&
+                                  child.summary && (
+                                    <p className="truncate text-xs text-zinc-500 mt-0.5">
+                                      {renderHighlightedText(child.summary)}
+                                    </p>
+                                  )}
+                              </div>
+                            </div>
 
-                                    <div className="shrink-0 opacity-60 group-hover:opacity-100">
-                                      {renderNoteActionsMenu(child)}
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                            <div className="flex shrink-0 items-center gap-1">
+                              {!isPromoted && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void handlePatchNote(child.id, {
+                                      togglePromotedToSpace: true,
+                                    });
+                                  }}
+                                  className="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-600 opacity-0 transition hover:border-blue-300 hover:text-blue-700 group-hover:opacity-100"
+                                >
+                                  <ArrowUpRight className="h-3 w-3" />
+                                  <span>Ayrı not yap</span>
+                                </button>
+                              )}
+                              <div className="opacity-60 group-hover:opacity-100">
+                                {renderNoteActionsMenu(child)}
+                              </div>
                             </div>
                           </div>
                         );
