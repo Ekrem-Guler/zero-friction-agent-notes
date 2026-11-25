@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { generateObject, generateText, transcribe } from "ai";
+import { generateText, Output, transcribe } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
@@ -17,8 +17,58 @@ import { decryptSecret } from "./crypto";
 import { SECURITY_LIMITS } from "./rate-limit";
 import { extractFirstUrl, fetchSafeUrlSnippet } from "./url-preview";
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+const GEMINI_FALLBACK_MODELS = Array.from(
+  new Set([
+    ...(process.env.GEMINI_MODEL?.trim()
+      ? [process.env.GEMINI_MODEL.trim()]
+      : []),
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+  ])
+);
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+
+function isRetriableModelError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes("high demand") ||
+    msg.includes("overloaded") ||
+    msg.includes("unavailable") ||
+    msg.includes("503") ||
+    msg.includes("429") ||
+    msg.includes("not found") ||
+    msg.includes("404") ||
+    msg.includes("is not supported") ||
+    msg.includes("deprecated")
+  );
+}
+
+async function runWithGeminiFallback<T>(
+  apiKey: string,
+  fn: (
+    modelId: string,
+    google: ReturnType<typeof createGoogleGenerativeAI>
+  ) => Promise<T>
+): Promise<{ value: T; modelUsed: string }> {
+  const google = createGoogleGenerativeAI({ apiKey });
+  let lastError: unknown;
+  for (const modelId of GEMINI_FALLBACK_MODELS) {
+    try {
+      const value = await fn(modelId, google);
+      return { value, modelUsed: modelId };
+    } catch (err) {
+      lastError = err;
+      if (!isRetriableModelError(err)) {
+        throw err;
+      }
+    }
+  }
+  throw lastError ?? new Error("Tüm Gemini modelleri şu anda yoğun.");
+}
 
 const StructuredNoteSchema = z.object({
   spaceId: z
@@ -285,15 +335,19 @@ async function getOrFetchWebResearch(
   // Live grounded web lookup with Gemini Google Search tool when provider is Gemini
   if (creds.provider === "gemini") {
     try {
-      const google = createGoogleGenerativeAI({ apiKey: creds.apiKey });
-      const res = await generateText({
-        model: google(GEMINI_MODEL),
-        tools: {
-          google_search: google.tools.googleSearch({}),
-        },
-        maxOutputTokens: 400,
-        prompt: `"${rawText.slice(0, 80)}" adlı yazılım aracı, şirket veya kavram nedir, ne işe yarar, resmi sitesi nedir ve fiyat modeli nasıldır? Maksimum 3 kısa cümleyle Türkçe özetle.`,
-      });
+      const { value: res } = await runWithGeminiFallback(
+        creds.apiKey,
+        (modelId, google) =>
+          generateText({
+            model: google(modelId),
+            tools: {
+              google_search: google.tools.googleSearch({}),
+            },
+            maxRetries: 0,
+            maxOutputTokens: 400,
+            prompt: `"${rawText.slice(0, 80)}" adlı yazılım aracı, şirket veya kavram nedir, ne işe yarar, resmi sitesi nedir ve fiyat modeli nasıldır? Maksimum 3 kısa cümleyle Türkçe özetle.`,
+          })
+      );
 
       const text = res.text?.trim();
       const tokensIn = res.usage?.inputTokens ?? 0;
@@ -347,27 +401,31 @@ export async function transcribeVoiceNote(
   }
 
   if (creds.provider === "gemini") {
-    const google = createGoogleGenerativeAI({ apiKey: creds.apiKey });
-    const res = await generateText({
-      model: google(GEMINI_MODEL),
-      maxOutputTokens: 400,
-      messages: [
-        {
-          role: "user",
-          content: [
+    const { value: res, modelUsed } = await runWithGeminiFallback(
+      creds.apiKey,
+      (modelId, google) =>
+        generateText({
+          model: google(modelId),
+          maxRetries: 0,
+          maxOutputTokens: 400,
+          messages: [
             {
-              type: "text",
-              text: "Bu ses kaydını dinle ve konuşulanları eksiksiz yazıya dök. Türkçe konuşma içindeki İngilizce teknik/yazılım ürün isimlerini (örn. Semrush, Supabase, landing page, SaaS) doğru yaz. SADECE konuşulan metni döndür, başka hiçbir açıklama ekleme.",
-            },
-            {
-              type: "file",
-              data: audioBytes,
-              mediaType: mimeType || "audio/webm",
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Bu ses kaydını dinle ve konuşulanları eksiksiz yazıya dök. Türkçe konuşma içindeki İngilizce teknik/yazılım ürün isimlerini (örn. Semrush, Supabase, landing page, SaaS) doğru yaz. SADECE konuşulan metni döndür, başka hiçbir açıklama ekleme.",
+                },
+                {
+                  type: "file",
+                  data: audioBytes,
+                  mediaType: mimeType || "audio/webm",
+                },
+              ],
             },
           ],
-        },
-      ],
-    });
+        })
+    );
 
     const transcript = res.text.trim().slice(0, SECURITY_LIMITS.MAX_TEXT_CHARS);
     const inTok = res.usage?.inputTokens ?? 250;
@@ -375,7 +433,7 @@ export async function transcribeVoiceNote(
     return {
       transcript,
       usedByok: creds.usedByok,
-      providerUsed: "gemini",
+      providerUsed: modelUsed,
       costUsd: estimateCostUsd("gemini", inTok, outTok, false),
     };
   }
@@ -509,20 +567,43 @@ SINIFLANDIRMA İLKELERİ:
       research.snippet ? `\n\n<WEB_RESEARCH>\n${research.snippet}\n</WEB_RESEARCH>` : ""
     }`;
 
-    const model =
-      creds.provider === "gemini"
-        ? createGoogleGenerativeAI({ apiKey: creds.apiKey })(GEMINI_MODEL)
-        : createOpenAI({ apiKey: creds.apiKey })(OPENAI_MODEL);
+    let parsed: StructuredNoteOutput;
+    let modelUsed: string = creds.provider;
+    let usageIn = 0;
+    let usageOut = 0;
 
-    const result = await generateObject({
-      model,
-      schema: StructuredNoteSchema,
-      system: systemPrompt,
-      prompt: userPrompt,
-      maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
-    });
-
-    const parsed: StructuredNoteOutput = result.object;
+    if (creds.provider === "gemini") {
+      const { value: result, modelUsed: used } = await runWithGeminiFallback(
+        creds.apiKey,
+        (modelId, google) =>
+          generateText({
+            model: google(modelId),
+            output: Output.object({ schema: StructuredNoteSchema }),
+            system: systemPrompt,
+            prompt: userPrompt,
+            maxRetries: 0,
+            maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
+          })
+      );
+      parsed = result.output;
+      modelUsed = used;
+      usageIn = result.usage?.inputTokens ?? 0;
+      usageOut = result.usage?.outputTokens ?? 0;
+    } else {
+      const openai = createOpenAI({ apiKey: creds.apiKey });
+      const result = await generateText({
+        model: openai(OPENAI_MODEL),
+        output: Output.object({ schema: StructuredNoteSchema }),
+        system: systemPrompt,
+        prompt: userPrompt,
+        maxRetries: 1,
+        maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
+      });
+      parsed = result.output;
+      modelUsed = OPENAI_MODEL;
+      usageIn = result.usage?.inputTokens ?? 0;
+      usageOut = result.usage?.outputTokens ?? 0;
+    }
     const validSpaceIds = new Set(allSpaces.map((s) => s.id));
     const safeSpaceId = validSpaceIds.has(parsed.spaceId)
       ? parsed.spaceId
@@ -561,8 +642,8 @@ SINIFLANDIRMA İLKELERİ:
       tags: parsed.tags || [],
     };
 
-    const inTokens = (result.usage?.inputTokens ?? 0) + research.tokensIn;
-    const outTokens = (result.usage?.outputTokens ?? 0) + research.tokensOut;
+    const inTokens = usageIn + research.tokensIn;
+    const outTokens = usageOut + research.tokensOut;
     const totalCost =
       extraCostUsd +
       estimateCostUsd(creds.provider, inTokens, outTokens, research.usedSearch);
@@ -576,7 +657,7 @@ SINIFLANDIRMA İLKELERİ:
         summary: parsed.summary.trim(),
         metadataJson: JSON.stringify(metadata),
         suggestedSpace: cleanSuggestedSpace,
-        providerUsed: creds.provider,
+        providerUsed: modelUsed,
         usedByok: creds.usedByok,
         inputTokens: inTokens,
         outputTokens: outTokens,
