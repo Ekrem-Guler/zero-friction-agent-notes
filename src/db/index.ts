@@ -9,11 +9,10 @@ const DEFAULT_DB_URL = "file:./data/local.db";
 
 function resolveDbUrl(): string {
   const url = process.env.DATABASE_URL?.trim() || DEFAULT_DB_URL;
-  if (url.startsWith("file:")) {
-    const filePath = url.replace(/^file:/, "");
-    const absDir = path.dirname(path.resolve(process.cwd(), filePath));
-    if (!fs.existsSync(absDir)) {
-      fs.mkdirSync(absDir, { recursive: true });
+  if (url === DEFAULT_DB_URL) {
+    const dataDir = path.join(process.cwd(), "data");
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
     }
   }
   return url;
