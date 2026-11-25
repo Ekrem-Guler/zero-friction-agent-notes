@@ -17,6 +17,9 @@ import { decryptSecret } from "./crypto";
 import { SECURITY_LIMITS } from "./rate-limit";
 import { extractFirstUrl, fetchSafeUrlSnippet } from "./url-preview";
 
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+
 const StructuredNoteSchema = z.object({
   spaceId: z
     .string()
@@ -284,11 +287,11 @@ async function getOrFetchWebResearch(
     try {
       const google = createGoogleGenerativeAI({ apiKey: creds.apiKey });
       const res = await generateText({
-        model: google("gemini-2.5-flash"),
+        model: google(GEMINI_MODEL),
         tools: {
           google_search: google.tools.googleSearch({}),
         },
-        maxOutputTokens: 180,
+        maxOutputTokens: 400,
         prompt: `"${rawText.slice(0, 80)}" adlı yazılım aracı, şirket veya kavram nedir, ne işe yarar, resmi sitesi nedir ve fiyat modeli nasıldır? Maksimum 3 kısa cümleyle Türkçe özetle.`,
       });
 
@@ -346,8 +349,8 @@ export async function transcribeVoiceNote(
   if (creds.provider === "gemini") {
     const google = createGoogleGenerativeAI({ apiKey: creds.apiKey });
     const res = await generateText({
-      model: google("gemini-2.5-flash"),
-      maxOutputTokens: 220,
+      model: google(GEMINI_MODEL),
+      maxOutputTokens: 400,
       messages: [
         {
           role: "user",
@@ -508,8 +511,8 @@ SINIFLANDIRMA İLKELERİ:
 
     const model =
       creds.provider === "gemini"
-        ? createGoogleGenerativeAI({ apiKey: creds.apiKey })("gemini-2.5-flash")
-        : createOpenAI({ apiKey: creds.apiKey })("gpt-4o-mini");
+        ? createGoogleGenerativeAI({ apiKey: creds.apiKey })(GEMINI_MODEL)
+        : createOpenAI({ apiKey: creds.apiKey })(OPENAI_MODEL);
 
     const result = await generateObject({
       model,
