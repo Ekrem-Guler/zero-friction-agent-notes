@@ -28,6 +28,7 @@ export async function POST(request: Request) {
     text?: string;
     projectId?: string;
     preferredSpaceId?: string;
+    useAi?: boolean;
   };
 
   const trimmed = (body.text || "").trim();
@@ -47,6 +48,7 @@ export async function POST(request: Request) {
   const now = Date.now();
   const id = crypto.randomUUID();
   const projectId = body.projectId?.trim() || "default";
+  const useAi = body.useAi !== false;
 
   const initialRow: typeof notes.$inferInsert = {
     id,
@@ -55,12 +57,13 @@ export async function POST(request: Request) {
     spaceId: body.preferredSpaceId || "ideas",
     rawText: trimmed,
     inputType: "text",
-    status: "processing",
-    title: trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed,
-    summary: "Yapay zeka ajanı analiz ediyor...",
+    status: useAi ? "processing" : "completed",
+    title:
+      useAi && trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed,
+    summary: useAi ? "Yapay zeka ajanı analiz ediyor..." : "",
     metadataJson: "{}",
     suggestedSpace: null,
-    providerUsed: "pending",
+    providerUsed: useAi ? "pending" : "raw-only",
     usedByok: false,
     inputTokens: 0,
     outputTokens: 0,
@@ -71,9 +74,11 @@ export async function POST(request: Request) {
 
   await db.insert(notes).values(initialRow);
 
-  after(async () => {
-    await processAndEnrichNote(id, trimmed);
-  });
+  if (useAi) {
+    after(async () => {
+      await processAndEnrichNote(id, trimmed);
+    });
+  }
 
   const saved = {
     ...initialRow,

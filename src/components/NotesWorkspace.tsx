@@ -52,6 +52,20 @@ const PROJECT_DOT_COLORS: Record<string, string> = {
   rose: "bg-rose-500",
 };
 
+function renderHighlightedText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
+      return (
+        <strong key={idx} className="font-semibold text-zinc-950">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
 export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const [authenticated, setAuthenticated] = useState(initialAuthenticated);
   const [loading, setLoading] = useState(initialAuthenticated);
@@ -1031,6 +1045,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
               <CaptureBar
                 activeProjectId={activeProject.id}
                 activeProjectName={activeProject.name}
+                spaces={spaces}
+                activeSpaceId={activeSpaceTab}
                 onNoteCreated={(newNote) => {
                   setNotes((prev) => [newNote, ...prev]);
                   setComposeHeroMode(false);
@@ -1171,16 +1187,19 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                     </h1>
                   </div>
 
-                  <p className="text-[15px] leading-relaxed text-zinc-700">
-                    {focusedNote.status === "processing" ? (
-                      <span className="inline-flex items-center gap-2 text-blue-600">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {focusedNote.summary}
-                      </span>
-                    ) : (
-                      focusedNote.summary
-                    )}
-                  </p>
+                  {(focusedNote.status === "processing" ||
+                    focusedNote.summary) && (
+                    <p className="text-[15px] leading-relaxed text-zinc-700">
+                      {focusedNote.status === "processing" ? (
+                        <span className="inline-flex items-center gap-2 text-blue-600">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {focusedNote.summary}
+                        </span>
+                      ) : (
+                        renderHighlightedText(focusedNote.summary)
+                      )}
+                    </p>
+                  )}
 
                   {focusedNote.metadata.officialUrl && (
                     <a
@@ -1253,13 +1272,11 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
 
                   <div className="border-t border-zinc-100 pt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
                     <span>Ham girdi: &ldquo;{focusedNote.rawText}&rdquo;</span>
-                    <div className="flex items-center gap-2">
-                      {(focusedNote.metadata.tags || []).map((t) => (
-                        <span key={t} className="font-mono text-[11px]">
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
+                    {focusedNote.providerUsed === "raw-only" && (
+                      <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] text-zinc-500">
+                        Sadece Ham Not
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1270,6 +1287,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 <CaptureBar
                   activeProjectId={activeProject.id}
                   activeProjectName={activeProject.name}
+                  spaces={spaces}
+                  activeSpaceId={activeSpaceTab}
                   onNoteCreated={(newNote) => {
                     setNotes((prev) => [newNote, ...prev]);
                     setFocusedNoteId(newNote.id);
@@ -1408,7 +1427,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                       note.status !== "processing" &&
                                       note.summary && (
                                         <p className="truncate text-xs text-zinc-500 mt-0.5">
-                                          {note.summary}
+                                          {renderHighlightedText(note.summary)}
                                         </p>
                                       )}
                                   </div>
@@ -1449,6 +1468,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 <CaptureBar
                   activeProjectId={activeProject.id}
                   activeProjectName={activeProject.name}
+                  spaces={spaces}
+                  activeSpaceId={activeSpaceTab}
                   onNoteCreated={(newNote) => {
                     setNotes((prev) => [newNote, ...prev]);
                   }}

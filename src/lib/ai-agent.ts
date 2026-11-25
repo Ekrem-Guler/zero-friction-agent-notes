@@ -83,9 +83,9 @@ const StructuredNoteSchema = z.object({
     .describe("Net, kısa ve taranabilir başlık (maksimum 80 karakter)."),
   summary: z
     .string()
-    .max(220)
+    .max(240)
     .describe(
-      "Maksimum 1-2 cümlelik özlü açıklama veya eylem özeti (maksimum 220 karakter). Asla sohbet cevabı veya kod bloğu yazma."
+      "Maksimum 1-2 cümlelik özlü açıklama veya eylem özeti (maksimum 240 karakter). Cümledeki en kritik 1-2 anahtar ifadeyi (örneğin bir aracın ne olduğu: '**not alma uygulamasıdır**' veya eylemin özü) **kalın** işaretleyerek vurgula. Asla sohbet cevabı veya kod bloğu yazma."
     ),
   subtasks: z
     .array(z.string().max(90))
@@ -567,8 +567,8 @@ MEVCUT BAŞLIKLAR (spaceId SADECE bunlardan biri olabilir):
 ${spacesDescription}
 
 SINIFLANDIRMA İLKELERİ:
-1. Tek kelimelik araç, şirket, kütüphane veya link ise (örn: "Semrush", "Stripe") ne işe yaradığını, kategorisini ve kullanıcının bağlamındaki olası kullanım amacını özlüce yaz; Araçlar & Kaynaklar (veya ilgili özel başlık) ID'sini seç.
-2. Yarım bırakılmış bir iş veya eylem notu ise (örn: "yarın bütçe sunumu", "landing page metni") net bir eylem başlığına çevir, en fazla 3-4 somut alt adım çıkar ve Yapılacaklar (veya ilgili özel başlık) ID'sini seç.
+1. Tek kelimelik araç, şirket, kütüphane veya link ise (örn: "Semrush", "Obsidian", "Stripe") ne işe yaradığını, kategorisini ve kullanıcının bağlamındaki olası kullanım amacını özlüce yaz; Araçlar & Kaynaklar (veya ilgili özel başlık) ID'sini seç. Özet cümlesinde bu aracın temel tanımını mutlaka **kalın** yap (örn: "Obsidian, bağlantılı çalışan **kişisel not alma uygulamasıdır**.").
+2. Yarım bırakılmış bir iş veya eylem notu ise (örn: "yarın bütçe sunumu", "landing page metni") net bir eylem başlığına çevir, en fazla 3-4 somut alt adım çıkar ve Yapılacaklar (veya ilgili özel başlık) ID'sini seç. Özet cümlesinde en önemli eylemi veya tarihi **kalın** vurgula.
 3. Ürün/iş fikri veya düşünce ise Fikirler (veya ilgili özel başlık) ID'sini seç ve ilk doğrulama adımını (nextStep) belirt.
 4. Başlık Karmaşası Koruması: Yeni başlık açma yetkin YOKTUR. Sadece not mevcut başlıklardan hiçbirine gerçekten uymuyorsa suggestedNewSpace alanına kısa bir başlık önerisi yaz; uyuyorsa kesinlikle null bırak.`;
 

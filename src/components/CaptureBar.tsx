@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, ArrowUp, Square, X, Loader2, Sparkles } from "lucide-react";
-import type { ClientNote } from "@/lib/serializers";
+import { Mic, ArrowUp, Square, X, Loader2, Sparkles, FileText } from "lucide-react";
+import type { ClientNote, ClientSpace } from "@/lib/serializers";
 
 const MAX_CHARS = 500;
 const MAX_VOICE_SECONDS = 45;
@@ -10,6 +10,8 @@ const MAX_VOICE_SECONDS = 45;
 interface CaptureBarProps {
   activeProjectId: string;
   activeProjectName: string;
+  spaces: ClientSpace[];
+  activeSpaceId: string;
   onNoteCreated: (note: ClientNote) => void;
   onError: (msg: string) => void;
 }
@@ -35,10 +37,18 @@ function getSupportedAudioMimeType(): string {
 export function CaptureBar({
   activeProjectId,
   activeProjectName,
+  spaces,
+  activeSpaceId,
   onNoteCreated,
   onError,
 }: CaptureBarProps) {
   const [text, setText] = useState("");
+  const [useAi, setUseAi] = useState(true);
+  const [selectedRawSpaceId, setSelectedRawSpaceId] = useState<string | null>(
+    null
+  );
+  const effectiveRawSpaceId =
+    selectedRawSpaceId ?? (activeSpaceId !== "all" ? activeSpaceId : "ideas");
   const [submittingText, setSubmittingText] = useState(false);
 
   const [isRecording, setIsRecording] = useState(false);
@@ -97,6 +107,8 @@ export function CaptureBar({
         body: JSON.stringify({
           text: trimmed,
           projectId: activeProjectId,
+          useAi,
+          preferredSpaceId: useAi ? undefined : effectiveRawSpaceId,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -288,12 +300,49 @@ export function CaptureBar({
             className="w-full resize-none bg-transparent py-1 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-500 focus:outline-none"
           />
 
-          <div className="mt-1 flex items-center justify-between pt-1">
+          <div className="mt-1 flex items-center justify-between gap-2 pt-1">
             <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-              <span className="hidden sm:inline">
-                Enter ile gönder • Ajan otomatik araştırır & sınıflandırır
-              </span>
+              <button
+                type="button"
+                onClick={() => setUseAi((v) => !v)}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  useAi
+                    ? "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                    : "bg-zinc-200/80 text-zinc-800 hover:bg-zinc-300/70"
+                }`}
+                title={
+                  useAi
+                    ? "AI özetleme ve sınıflandırma aktif"
+                    : "Yapay zeka kapalı — sadece ham not kaydedilir"
+                }
+              >
+                {useAi ? (
+                  <>
+                    <Sparkles className="h-3 w-3 text-blue-600" />
+                    <span>AI Ajanı</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-3 w-3 text-zinc-700" />
+                    <span>Sadece Ham</span>
+                  </>
+                )}
+              </button>
+
+              {!useAi && spaces.length > 0 && (
+                <select
+                  value={effectiveRawSpaceId}
+                  onChange={(e) => setSelectedRawSpaceId(e.target.value)}
+                  className="rounded-full border border-zinc-200 bg-white px-2.5 py-0.5 text-[11px] text-zinc-700 focus:outline-none"
+                >
+                  {spaces.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               <span className="font-mono text-zinc-400">
                 {text.length}/{MAX_CHARS}
               </span>
