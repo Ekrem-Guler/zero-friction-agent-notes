@@ -5,6 +5,10 @@ import { appSettings, notes, projects, spaces } from "@/db/schema";
 import { isAuthenticated, isPasswordProtectionEnabled } from "@/lib/auth";
 import { decryptSecret, maskApiKey } from "@/lib/crypto";
 import {
+  FREE_MONTHLY_AI_LIMIT,
+  getCurrentMonthFreeUsage,
+} from "@/lib/ai-agent";
+import {
   serializeNote,
   serializeProject,
   serializeSpace,
@@ -72,10 +76,19 @@ export async function GET() {
     passwordProtectionEnabled: isPasswordProtectionEnabled(),
   };
 
+  const freeUsage = await getCurrentMonthFreeUsage();
+  const freeCreditsRemaining = Math.max(
+    0,
+    FREE_MONTHLY_AI_LIMIT - freeUsage.count
+  );
+
   const usageStats: UsageStats = {
     monthlySystemSpendUsd: Number(monthlySystemSpendUsd.toFixed(4)),
     monthlyByokSpendUsd: Number(monthlyByokSpendUsd.toFixed(4)),
     totalNotesCount: noteRows.length,
+    freeCreditsUsed: freeUsage.count,
+    freeCreditsLimit: FREE_MONTHLY_AI_LIMIT,
+    freeCreditsRemaining,
   };
 
   return NextResponse.json({

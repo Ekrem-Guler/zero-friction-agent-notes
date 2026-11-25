@@ -121,25 +121,58 @@ export function SettingsModal({
             />
           </section>
 
-          {/* 2. Provider & BYOK Keys */}
+          {/* 2. Built-in Free Tier vs BYOK Mode */}
           <section className="space-y-3 rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-700">
-                <KeyRound className="h-3.5 w-3.5 text-blue-600" />
-                <span>Bring Your Own Key (BYOK — Unlimited)</span>
-              </div>
-              <label className="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={preferByok}
-                  onChange={(e) => setPreferByok(e.target.checked)}
-                  className="accent-blue-600"
-                />
-                <span>Prefer BYOK</span>
-              </label>
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-700">
+              <KeyRound className="h-3.5 w-3.5 text-blue-600" />
+              <span>AI Mode & Free Credits</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPreferByok(false)}
+                className={`rounded-xl border px-3 py-2.5 text-left text-xs transition ${
+                  !preferByok
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                <div className="font-semibold">Built-in Free AI</div>
+                <div className="text-[11px] opacity-80">
+                  {usageStats.freeCreditsRemaining}/{usageStats.freeCreditsLimit}{" "}
+                  free credits left
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreferByok(true)}
+                className={`rounded-xl border px-3 py-2.5 text-left text-xs transition ${
+                  preferByok
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                <div className="font-semibold">BYOK (Unlimited)</div>
+                <div className="text-[11px] opacity-80">
+                  Use your own API key
+                </div>
+              </button>
+            </div>
+
+            {!preferByok && !settings.hasSystemKey && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                Server built-in key is not configured yet. To enable the free
+                tier for users without an API key, add{" "}
+                <code className="font-mono font-semibold">
+                  GOOGLE_GENERATIVE_AI_API_KEY
+                </code>{" "}
+                to your <code className="font-mono">.env.local</code> (or Vercel
+                env).
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setActiveProvider("gemini")}
@@ -245,6 +278,13 @@ export function SettingsModal({
             </div>
 
             <div className="space-y-1">
+              <div className="flex justify-between text-xs text-zinc-500">
+                <span>Monthly Free AI Credits</span>
+                <span className="font-mono text-zinc-800">
+                  {usageStats.freeCreditsUsed} / {usageStats.freeCreditsLimit}{" "}
+                  used
+                </span>
+              </div>
               <div className="flex justify-between text-xs text-zinc-500">
                 <span>Monthly System Quota Spend</span>
                 <span className="font-mono text-zinc-800">

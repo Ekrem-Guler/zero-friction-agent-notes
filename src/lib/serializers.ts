@@ -64,6 +64,9 @@ export interface UsageStats {
   monthlySystemSpendUsd: number;
   monthlyByokSpendUsd: number;
   totalNotesCount: number;
+  freeCreditsUsed: number;
+  freeCreditsLimit: number;
+  freeCreditsRemaining: number;
 }
 
 export function serializeProject(row: ProjectRow): ClientProject {

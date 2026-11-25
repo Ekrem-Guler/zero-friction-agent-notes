@@ -3,7 +3,7 @@ import { generateText, Output, transcribe } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, notInArray, sql } from "drizzle-orm";
 import { ensureDbReady } from "@/db";
 import {
   appSettings,
@@ -31,6 +31,10 @@ const GEMINI_FALLBACK_MODELS = Array.from(
   ])
 );
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+export const FREE_MONTHLY_AI_LIMIT = Math.max(
+  1,
+  Number(process.env.FREE_MONTHLY_AI_LIMIT || "15") || 15
+);
 
 function isRetriableModelError(err: unknown): boolean {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
@@ -151,22 +155,36 @@ interface ResolvedCredentials {
   apiKey: string;
   usedByok: boolean;
   budgetExceeded: boolean;
+  freeQuotaExceeded: boolean;
   userContext: string;
 }
 
-async function getCurrentMonthSystemSpendUsd(): Promise<number> {
+export async function getCurrentMonthFreeUsage(): Promise<{
+  count: number;
+  spendUsd: number;
+}> {
   const db = await ensureDbReady();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
   const rows = await db
     .select({
+      count: sql<number>`COUNT(*)`,
       total: sql<number>`COALESCE(SUM(${notes.costUsd}), 0)`,
     })
     .from(notes)
-    .where(and(eq(notes.usedByok, false), gte(notes.createdAt, monthStart)));
+    .where(
+      and(
+        eq(notes.usedByok, false),
+        gte(notes.createdAt, monthStart),
+        notInArray(notes.providerUsed, ["raw-only", "local-fallback", "pending"])
+      )
+    );
 
-  return Number(rows[0]?.total ?? 0);
+  return {
+    count: Number(rows[0]?.count ?? 0),
+    spendUsd: Number(rows[0]?.total ?? 0),
+  };
 }
 
 async function resolveCredentials(): Promise<ResolvedCredentials> {
@@ -184,7 +202,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
   const sysGemini = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || "";
   const sysOpenai = process.env.OPENAI_API_KEY?.trim() || "";
 
-  // 1. Prefer BYOK if available (Unlimited for user, $0 cost risk for platform)
+  // 1. Prefer BYOK if enabled & available (Unlimited for user, $0 cost risk for platform)
   if (settings?.preferByok !== false) {
     if (preferredProvider === "gemini" && byokGemini) {
       return {
@@ -192,6 +210,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
         apiKey: byokGemini,
         usedByok: true,
         budgetExceeded: false,
+        freeQuotaExceeded: false,
         userContext,
       };
     }
@@ -201,6 +220,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
         apiKey: byokOpenai,
         usedByok: true,
         budgetExceeded: false,
+        freeQuotaExceeded: false,
         userContext,
       };
     }
@@ -210,6 +230,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
         apiKey: byokGemini,
         usedByok: true,
         budgetExceeded: false,
+        freeQuotaExceeded: false,
         userContext,
       };
     }
@@ -219,12 +240,13 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
         apiKey: byokOpenai,
         usedByok: true,
         budgetExceeded: false,
+        freeQuotaExceeded: false,
         userContext,
       };
     }
   }
 
-  // 2. System API Key with Hard Monthly Budget Circuit Breaker
+  // 2. Built-in Free Tier (Server System Key with Note Count Limit + Monthly USD Cap)
   const systemKey =
     preferredProvider === "gemini"
       ? sysGemini || sysOpenai
@@ -244,18 +266,33 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
       apiKey: "",
       usedByok: false,
       budgetExceeded: false,
+      freeQuotaExceeded: false,
       userContext,
     };
   }
 
   const budgetCap = settings?.monthlySystemBudgetUsd ?? 2.0;
-  const spentThisMonth = await getCurrentMonthSystemSpendUsd();
+  const { count: freeUsedCount, spendUsd: spentThisMonth } =
+    await getCurrentMonthFreeUsage();
+
+  if (freeUsedCount >= FREE_MONTHLY_AI_LIMIT) {
+    return {
+      provider: resolvedSystemProvider,
+      apiKey: "",
+      usedByok: false,
+      budgetExceeded: false,
+      freeQuotaExceeded: true,
+      userContext,
+    };
+  }
+
   if (spentThisMonth >= budgetCap) {
     return {
       provider: resolvedSystemProvider,
       apiKey: "",
       usedByok: false,
       budgetExceeded: true,
+      freeQuotaExceeded: false,
       userContext,
     };
   }
@@ -265,6 +302,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
     apiKey: systemKey,
     usedByok: false,
     budgetExceeded: false,
+    freeQuotaExceeded: false,
     userContext,
   };
 }
@@ -389,9 +427,14 @@ export async function transcribeVoiceNote(
 }> {
   const creds = await resolveCredentials();
 
+  if (creds.freeQuotaExceeded) {
+    throw new Error(
+      `You've used all ${FREE_MONTHLY_AI_LIMIT} free AI credits this month. Connect your own API key (BYOK) in Context & AI for unlimited voice notes.`
+    );
+  }
   if (creds.budgetExceeded) {
     throw new Error(
-      "Monthly system AI budget reached. Connect your own API key (BYOK) in Settings for unlimited voice notes."
+      "Monthly system AI budget reached. Connect your own API key (BYOK) in Context & AI for unlimited voice notes."
     );
   }
   if (!creds.apiKey) {
@@ -511,11 +554,13 @@ export async function processAndEnrichNote(
 
   const creds = await resolveCredentials();
 
-  // Handle missing API key or exceeded monthly system budget gracefully without losing note
-  if (creds.budgetExceeded || !creds.apiKey) {
-    const notice = creds.budgetExceeded
-      ? "Monthly system AI budget reached. Connect your own API key (BYOK) in Settings for unlimited AI summaries."
-      : "Saved as raw note because no AI API key is configured yet. Add a Gemini or OpenAI key in Settings.";
+  // Handle missing API key, exhausted free credits, or exceeded monthly budget gracefully
+  if (creds.freeQuotaExceeded || creds.budgetExceeded || !creds.apiKey) {
+    const notice = creds.freeQuotaExceeded
+      ? `You've used all ${FREE_MONTHLY_AI_LIMIT} free AI credits this month. Connect your own API key (BYOK) in Context & AI for unlimited summaries.`
+      : creds.budgetExceeded
+        ? "Monthly system AI budget reached. Connect your own API key (BYOK) in Context & AI for unlimited AI summaries."
+        : "Built-in Free AI is not configured on this server yet (set GOOGLE_GENERATIVE_AI_API_KEY in .env.local), or add your own API key in Context & AI.";
 
     const fallback = buildLocalFallbackClassification(
       safeRaw,
