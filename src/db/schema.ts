@@ -13,6 +13,7 @@ export interface SubtaskItem {
 
 export interface NoteMetadata {
   isCompleted?: boolean;
+  showRawOnly?: boolean;
   dueDate?: string | null;
   priority?: "low" | "medium" | "high" | null;
   subtasks?: SubtaskItem[];

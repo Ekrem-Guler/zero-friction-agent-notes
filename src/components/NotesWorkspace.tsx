@@ -28,6 +28,7 @@ import {
   SquarePen,
   MoreHorizontal,
   Layers,
+  FileText,
 } from "lucide-react";
 import type {
   ClientNote,
@@ -84,7 +85,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
   const [activeSpaceTab, setActiveSpaceTab] = useState<string>("all");
   const [focusedNoteId, setFocusedNoteId] = useState<string | null>(null);
   const [composeHeroMode, setComposeHeroMode] = useState<boolean>(false);
-  const [showBriefSummaries, setShowBriefSummaries] = useState<boolean>(true);
+  const [viewMode, setViewMode] = useState<"ai" | "titles" | "raw">("ai");
   const [openMenuNoteId, setOpenMenuNoteId] = useState<string | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -517,6 +518,21 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             )}
 
             <div className="border-t border-zinc-100 pt-1 space-y-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenMenuNoteId(null);
+                  void handlePatchNote(note.id, { toggleShowRaw: true });
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>
+                  {note.metadata.showRawOnly
+                    ? "AI Özetini Göster"
+                    : "Ham Girdi Olarak Göster"}
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -969,13 +985,41 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
 
           <div className="flex items-center gap-2 shrink-0">
             {!showCenteredHero && !focusedNote && filteredNotes.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowBriefSummaries((v) => !v)}
-                className="hidden sm:inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800"
-              >
-                {showBriefSummaries ? "Sadece Başlık" : "Kısa Özetli"}
-              </button>
+              <div className="inline-flex items-center rounded-full bg-zinc-100 p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("ai")}
+                  className={`rounded-full px-2.5 py-1 font-medium transition ${
+                    viewMode === "ai"
+                      ? "bg-white text-zinc-900 shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  Özetli
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("titles")}
+                  className={`rounded-full px-2.5 py-1 font-medium transition ${
+                    viewMode === "titles"
+                      ? "bg-white text-zinc-900 shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  Başlık
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("raw")}
+                  className={`rounded-full px-2.5 py-1 font-medium transition ${
+                    viewMode === "raw"
+                      ? "bg-white text-zinc-900 shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800"
+                  }`}
+                >
+                  Ham Girdiler
+                </button>
+              </div>
             )}
             {hasProcessingNotes && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-medium text-blue-700">
@@ -1072,7 +1116,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           <>
             <main className="flex-1 overflow-y-auto px-5 py-6">
               <div className="mx-auto w-full max-w-2xl space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <button
                     type="button"
                     onClick={() => setFocusedNoteId(null)}
@@ -1081,7 +1125,29 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                     <ArrowLeft className="h-3.5 w-3.5" />
                     <span>{activeProject.name} notlarına dön</span>
                   </button>
-                  {renderNoteActionsMenu(focusedNote)}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handlePatchNote(focusedNote.id, {
+                          toggleShowRaw: true,
+                        })
+                      }
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        focusedNote.metadata.showRawOnly || viewMode === "raw"
+                          ? "bg-zinc-900 text-white"
+                          : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                      }`}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>
+                        {focusedNote.metadata.showRawOnly
+                          ? "AI Özetini Göster"
+                          : "Ham Girdi Göster"}
+                      </span>
+                    </button>
+                    {renderNoteActionsMenu(focusedNote)}
+                  </div>
                 </div>
 
                 {focusedNote.suggestedSpace && (
@@ -1122,8 +1188,23 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   </div>
                 )}
 
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                {focusedNote.metadata.showRawOnly || viewMode === "raw" ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-xs text-zinc-500">
+                      <span>
+                        {spaceMap.get(focusedNote.spaceId)?.name || "Not"}
+                      </span>
+                      <span>•</span>
+                      <span>Ham Girdi Görünümü</span>
+                    </div>
+
+                    <h1 className="font-editorial text-3xl sm:text-4xl leading-tight text-zinc-900 whitespace-pre-wrap">
+                      {focusedNote.rawText}
+                    </h1>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
                     <span>
                       {spaceMap.get(focusedNote.spaceId)?.name || "Not"}
                     </span>
@@ -1278,7 +1359,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                       </span>
                     )}
                   </div>
-                </div>
+                  </div>
+                )}
               </div>
             </main>
 
@@ -1337,6 +1419,9 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                         <div className="divide-y divide-zinc-100">
                           {items.map((note) => {
                             const isDone = Boolean(note.metadata.isCompleted);
+                            const isRaw =
+                              viewMode === "raw" ||
+                              Boolean(note.metadata.showRawOnly);
 
                             return (
                               <div
@@ -1375,17 +1460,21 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                             : "text-zinc-900"
                                         }`}
                                       >
-                                        {note.title || note.rawText}
+                                        {isRaw
+                                          ? note.rawText
+                                          : note.title || note.rawText}
                                       </span>
 
-                                      {isResourceSpace &&
+                                      {!isRaw &&
+                                        isResourceSpace &&
                                         note.metadata.categoryTag && (
                                           <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
                                             {note.metadata.categoryTag}
                                           </span>
                                         )}
 
-                                      {isResourceSpace &&
+                                      {!isRaw &&
+                                        isResourceSpace &&
                                         note.metadata.officialUrl && (
                                           <a
                                             href={note.metadata.officialUrl}
@@ -1399,14 +1488,15 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                           </a>
                                         )}
 
-                                      {note.metadata.dueDate && (
+                                      {!isRaw && note.metadata.dueDate && (
                                         <span className="shrink-0 inline-flex items-center gap-1 text-[11px] text-amber-700">
                                           <Calendar className="h-3 w-3" />
                                           {note.metadata.dueDate}
                                         </span>
                                       )}
 
-                                      {note.metadata.subtasks &&
+                                      {!isRaw &&
+                                        note.metadata.subtasks &&
                                         note.metadata.subtasks.length > 0 && (
                                           <span className="shrink-0 font-mono text-[10px] text-zinc-400">
                                             {
@@ -1418,12 +1508,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                           </span>
                                         )}
 
-                                      {note.status === "processing" && (
+                                      {!isRaw && note.status === "processing" && (
                                         <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
                                       )}
                                     </div>
 
-                                    {showBriefSummaries &&
+                                    {!isRaw &&
+                                      viewMode === "ai" &&
                                       note.status !== "processing" &&
                                       note.summary && (
                                         <p className="truncate text-xs text-zinc-500 mt-0.5">

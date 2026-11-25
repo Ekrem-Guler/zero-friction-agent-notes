@@ -27,6 +27,7 @@ export async function PATCH(
     projectId?: string;
     spaceId?: string;
     toggleCompleted?: boolean;
+    toggleShowRaw?: boolean;
     toggleSubtaskId?: string;
     dismissSuggestion?: boolean;
     action?: "reprocess";
@@ -67,6 +68,10 @@ export async function PATCH(
 
   if (body.toggleCompleted) {
     meta.isCompleted = !meta.isCompleted;
+  }
+
+  if (body.toggleShowRaw) {
+    meta.showRawOnly = !meta.showRawOnly;
   }
 
   if (body.toggleSubtaskId && Array.isArray(meta.subtasks)) {
