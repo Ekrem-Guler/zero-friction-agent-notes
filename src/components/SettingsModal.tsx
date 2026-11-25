@@ -59,12 +59,12 @@ export function SettingsModal({
         setGeminiKey("");
         setOpenaiKey("");
         onSaved(data.settings);
-        setStatusMsg("Ayarlar kaydedildi.");
+        setStatusMsg("Settings saved.");
       } else {
-        setStatusMsg(data.error || "Kaydedilemedi.");
+        setStatusMsg(data.error || "Could not save settings.");
       }
     } catch {
-      setStatusMsg("Bağlantı hatası.");
+      setStatusMsg("Connection error.");
     } finally {
       setSaving(false);
     }
@@ -85,10 +85,10 @@ export function SettingsModal({
         <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
           <div>
             <h2 className="text-base font-semibold text-zinc-900">
-              Ajan Ayarları, Bağlam & BYOK
+              Agent Settings, Context & BYOK
             </h2>
             <p className="text-xs text-zinc-500">
-              Kişisel bağlamınızı ve kendi AI anahtarlarınızı yönetin
+              Manage your personal context and AI provider keys
             </p>
           </div>
           <button
@@ -105,18 +105,18 @@ export function SettingsModal({
           <section className="space-y-2">
             <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-600">
               <User className="h-3.5 w-3.5 text-blue-600" />
-              <span>Kişisel Bağlamım (User Context)</span>
+              <span>Personal Context</span>
             </label>
             <p className="text-xs text-zinc-500">
-              AI ajanı araştırdığı araçları ve fikirleri buradaki profilinize göre
-              yorumlar.
+              The AI agent tailors tool research and idea summaries based on
+              this profile.
             </p>
             <textarea
               rows={3}
               maxLength={600}
               value={userContext}
               onChange={(e) => setUserContext(e.target.value)}
-              placeholder='Örn: "Tek kişilik Micro-SaaS ürünleri geliştiriyorum. Next.js ve TypeScript kullanıyorum. Pazarlama ve büyüme araçlarıyla ilgileniyorum."'
+              placeholder='e.g. "Solo Micro-SaaS founder building with Next.js and TypeScript. Focused on lean growth and developer tools."'
               className="w-full rounded-2xl border border-zinc-200 bg-[#f8f9fa] p-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
             />
           </section>
@@ -126,7 +126,7 @@ export function SettingsModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-700">
                 <KeyRound className="h-3.5 w-3.5 text-blue-600" />
-                <span>Kendi AI Anahtarını Bağla (BYOK)</span>
+                <span>Bring Your Own Key (BYOK — Unlimited)</span>
               </div>
               <label className="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer">
                 <input
@@ -135,7 +135,7 @@ export function SettingsModal({
                   onChange={(e) => setPreferByok(e.target.checked)}
                   className="accent-blue-600"
                 />
-                <span>BYOK Öncelikli</span>
+                <span>Prefer BYOK</span>
               </label>
             </div>
 
@@ -151,7 +151,7 @@ export function SettingsModal({
               >
                 <div className="font-semibold">Google Gemini</div>
                 <div className="text-[11px] opacity-80">
-                  Web Araştırması + Ses
+                  Web Search + Voice
                 </div>
               </button>
               <button
@@ -165,7 +165,7 @@ export function SettingsModal({
               >
                 <div className="font-semibold">OpenAI</div>
                 <div className="text-[11px] opacity-80">
-                  GPT-4o-mini + Whisper Ses
+                  GPT-4o-mini + Whisper
                 </div>
               </button>
             </div>
@@ -174,7 +174,7 @@ export function SettingsModal({
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-zinc-700 font-medium">
-                  Gemini API Anahtarı
+                  Gemini API Key
                 </span>
                 {settings.hasGeminiByok && (
                   <span className="flex items-center gap-2 font-mono text-[11px] text-emerald-700">
@@ -183,7 +183,7 @@ export function SettingsModal({
                       type="button"
                       onClick={() => void handleSave({ clearGeminiKey: true })}
                       className="text-rose-600 hover:underline inline-flex items-center gap-0.5"
-                      title="Anahtarı Sil"
+                      title="Remove Key"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -196,8 +196,8 @@ export function SettingsModal({
                 onChange={(e) => setGeminiKey(e.target.value)}
                 placeholder={
                   settings.hasGeminiByok
-                    ? "Yeni anahtarla değiştirmek için yazın..."
-                    : "AIzaSy... (AES-256 ile şifrelenerek saklanır)"
+                    ? "Enter a new key to replace..."
+                    : "AIzaSy... (encrypted with AES-256-GCM)"
                 }
                 className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
               />
@@ -207,7 +207,7 @@ export function SettingsModal({
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-zinc-700 font-medium">
-                  OpenAI API Anahtarı
+                  OpenAI API Key
                 </span>
                 {settings.hasOpenaiByok && (
                   <span className="flex items-center gap-2 font-mono text-[11px] text-emerald-700">
@@ -216,7 +216,7 @@ export function SettingsModal({
                       type="button"
                       onClick={() => void handleSave({ clearOpenaiKey: true })}
                       className="text-rose-600 hover:underline inline-flex items-center gap-0.5"
-                      title="Anahtarı Sil"
+                      title="Remove Key"
                     >
                       <Trash2 className="h-3 w-3" />
                     </button>
@@ -229,8 +229,8 @@ export function SettingsModal({
                 onChange={(e) => setOpenaiKey(e.target.value)}
                 placeholder={
                   settings.hasOpenaiByok
-                    ? "Yeni anahtarla değiştirmek için yazın..."
-                    : "sk-... (AES-256 ile şifrelenerek saklanır)"
+                    ? "Enter a new key to replace..."
+                    : "sk-... (encrypted with AES-256-GCM)"
                 }
                 className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
               />
@@ -241,12 +241,12 @@ export function SettingsModal({
           <section className="space-y-2.5 rounded-2xl border border-zinc-200/80 bg-[#f8f9fa] p-4">
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-700">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Maliyet Sigortası & Kullanım Özeti</span>
+              <span>Cost Guardrail & Usage</span>
             </div>
 
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-zinc-500">
-                <span>Bu Ay Sistem Kotası Tüketimi</span>
+                <span>Monthly System Quota Spend</span>
                 <span className="font-mono text-zinc-800">
                   ${usageStats.monthlySystemSpendUsd.toFixed(4)} / $
                   {settings.monthlySystemBudgetUsd.toFixed(2)}
@@ -260,16 +260,16 @@ export function SettingsModal({
               </div>
               <div className="flex justify-between pt-1 text-[11px] text-zinc-500">
                 <span>
-                  BYOK Tahmini Tüketim: $
+                  Estimated BYOK Spend: $
                   {usageStats.monthlyByokSpendUsd.toFixed(4)}
                 </span>
-                <span>Toplam Not: {usageStats.totalNotesCount}</span>
+                <span>Total Notes: {usageStats.totalNotesCount}</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 pt-1">
               <label className="text-xs text-zinc-600">
-                Sistem Anahtarı Aylık Sert Tavan (USD):
+                System Key Monthly Hard Cap (USD):
               </label>
               <input
                 type="number"
@@ -292,7 +292,7 @@ export function SettingsModal({
               onClick={onClose}
               className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
             >
-              Kapat
+              Close
             </button>
             <button
               type="button"
@@ -305,7 +305,7 @@ export function SettingsModal({
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}
-              <span>Kaydet</span>
+              <span>Save</span>
             </button>
           </div>
         </div>

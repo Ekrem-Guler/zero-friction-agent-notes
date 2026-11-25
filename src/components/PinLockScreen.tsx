@@ -26,12 +26,12 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(data.error || "Şifre doğrulanamadı.");
+        setError(data.error || "Invalid password.");
         return;
       }
       onUnlocked();
     } catch {
-      setError("Sunucu bağlantısı kurulamadı.");
+      setError("Could not connect to the server.");
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
           <div>
             <h1 className="text-base font-semibold text-zinc-900">ZeroNote</h1>
             <p className="text-xs text-zinc-500">
-              Kişisel AI Not Alanına Giriş Yapın
+              Sign in to your personal AI workspace
             </p>
           </div>
         </div>
@@ -58,7 +58,7 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
             autoFocus
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Giriş şifresi / PIN..."
+            placeholder="Password / PIN..."
             className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
           />
 
@@ -73,7 +73,7 @@ export function PinLockScreen({ onUnlocked }: PinLockScreenProps) {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <span>Kilidi Aç</span>
+                <span>Unlock</span>
                 <ArrowRight className="h-4 w-4" />
               </>
             )}

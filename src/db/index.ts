@@ -43,10 +43,10 @@ const DEFAULT_SPACES: Array<typeof schema.spaces.$inferInsert> = [
   {
     id: "tasks",
     userId: "owner",
-    name: "Yapılacaklar",
+    name: "Tasks",
     kind: "tasks",
     description:
-      "Görevler, yapılacak işler, toplantılar, hatırlatmalar ve eylem adımları.",
+      "Action items, to-dos, meetings, reminders, and concrete next steps.",
     icon: "check-square",
     position: 0,
     isSystem: true,
@@ -55,10 +55,10 @@ const DEFAULT_SPACES: Array<typeof schema.spaces.$inferInsert> = [
   {
     id: "resources",
     userId: "owner",
-    name: "Araçlar & Kaynaklar",
+    name: "Tools & Resources",
     kind: "resources",
     description:
-      "Yazılım araçları, SaaS ürünleri, kütüphaneler, linkler, kavramlar ve araştırma kaynakları.",
+      "Software tools, SaaS products, libraries, links, concepts, and research references.",
     icon: "wrench",
     position: 1,
     isSystem: true,
@@ -67,10 +67,10 @@ const DEFAULT_SPACES: Array<typeof schema.spaces.$inferInsert> = [
   {
     id: "ideas",
     userId: "owner",
-    name: "Fikirler",
+    name: "Ideas",
     kind: "ideas",
     description:
-      "Ürün fikirleri, beyin fırtınası notları, stratejiler ve serbest düşünceler.",
+      "Product ideas, brainstorming notes, strategies, and freeform thoughts.",
     icon: "lightbulb",
     position: 2,
     isSystem: true,
@@ -181,14 +181,22 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
           .values({
             id: "default",
             userId: "owner",
-            name: "Genel Alan",
-            description: "Günlük fikirler, hızlı görevler ve genel araç araştırmaları.",
+            name: "General",
+            description: "Daily ideas, quick tasks, and general tool research.",
             color: "emerald",
             position: 0,
             isDefault: true,
             createdAt: Date.now(),
           })
           .onConflictDoNothing();
+      } else {
+        // Migrate legacy Turkish default labels to English seamlessly
+        await client.executeMultiple(`
+          UPDATE projects SET name = 'General', description = 'Daily ideas, quick tasks, and general tool research.' WHERE id = 'default' AND name = 'Genel Alan';
+          UPDATE spaces SET name = 'Tasks', description = 'Action items, to-dos, meetings, reminders, and concrete next steps.' WHERE id = 'tasks' AND name = 'Yapılacaklar';
+          UPDATE spaces SET name = 'Tools & Resources', description = 'Software tools, SaaS products, libraries, links, concepts, and research references.' WHERE id = 'resources' AND name = 'Araçlar & Kaynaklar';
+          UPDATE spaces SET name = 'Ideas', description = 'Product ideas, brainstorming notes, strategies, and freeform thoughts.' WHERE id = 'ideas' AND name = 'Fikirler';
+        `);
       }
 
       const existingSpaces = await db

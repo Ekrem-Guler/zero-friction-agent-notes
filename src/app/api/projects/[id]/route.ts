@@ -10,7 +10,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -23,7 +23,7 @@ export async function PATCH(
   const existing = await db.select().from(projects).where(eq(projects.id, id));
   const row = existing[0];
   if (!row) {
-    return NextResponse.json({ error: "Proje bulunamadı." }, { status: 404 });
+    return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
 
   const nextName = body.name?.trim().slice(0, 40) || row.name;
@@ -46,7 +46,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -60,11 +60,11 @@ export async function DELETE(
   const project = rows[0];
 
   if (!project) {
-    return NextResponse.json({ error: "Proje bulunamadı." }, { status: 404 });
+    return NextResponse.json({ error: "Project not found." }, { status: 404 });
   }
   if (project.isDefault || id === "default") {
     return NextResponse.json(
-      { error: "Varsayılan proje silinemez." },
+      { error: "The default project cannot be deleted." },
       { status: 400 }
     );
   }

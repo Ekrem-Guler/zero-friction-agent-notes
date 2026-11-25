@@ -195,7 +195,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       projects.find((p) => p.id === activeProjectId) ||
       projects[0] || {
         id: "default",
-        name: "Genel Alan",
+        name: "General",
         description: "",
         color: "emerald",
         position: 0,
@@ -330,7 +330,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         error?: string;
       };
       if (!res.ok || !data.project) {
-        setToastError(data.error || "Proje oluşturulamadı.");
+        setToastError(data.error || "Could not create project.");
         return;
       }
       setProjects((prev) =>
@@ -346,7 +346,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       setNewProjectDesc("");
       setAddingProject(false);
     } catch {
-      setToastError("Proje eklenirken hata oluştu.");
+      setToastError("Error creating project.");
     }
   }
 
@@ -370,7 +370,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       }
       await fetchBootstrap();
     } catch {
-      setToastError("Proje silinemedi.");
+      setToastError("Could not delete project.");
     }
   }
 
@@ -391,7 +391,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         error?: string;
       };
       if (!res.ok || !data.space) {
-        setToastError(data.error || "Başlık oluşturulamadı.");
+        setToastError(data.error || "Could not create space.");
         return;
       }
       setSpaces((prev) =>
@@ -406,7 +406,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       setNewSpaceDesc("");
       setAddingSpace(false);
     } catch {
-      setToastError("Başlık eklenirken hata oluştu.");
+      setToastError("Error creating space.");
     }
   }
 
@@ -417,7 +417,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
       setActiveSpaceTab("all");
       await fetchBootstrap();
     } catch {
-      setToastError("Başlık silinemedi.");
+      setToastError("Could not delete space.");
     }
   }
 
@@ -438,7 +438,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         await fetchBootstrap();
       }
     } catch {
-      setToastError("Önerilen başlık açılamadı.");
+      setToastError("Could not create suggested space.");
     }
   }
 
@@ -461,7 +461,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         );
       }
     } catch {
-      setToastError("Güncellenemedi.");
+      setToastError("Could not update note.");
     }
   }
 
@@ -514,7 +514,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             e.stopPropagation();
             setOpenMenuNoteId(isOpen ? null : note.id);
           }}
-          title="Seçenekler"
+          title="Options"
           className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
         >
           <MoreHorizontal className="h-4 w-4" />
@@ -526,7 +526,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             className="absolute right-0 top-8 z-30 w-52 rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl shadow-zinc-200/70"
           >
             <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-              Başlık Değiştir
+              Move to Space
             </div>
             <div className="mb-1.5 space-y-0.5">
               {spaces.map((s) => (
@@ -552,7 +552,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             {projects.length > 1 && (
               <>
                 <div className="border-t border-zinc-100 pt-1.5 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                  Projeye Taşı
+                  Move to Project
                 </div>
                 <div className="mb-1.5 space-y-0.5">
                   {projects.map((p) => (
@@ -592,8 +592,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   <ArrowUpRight className="h-3.5 w-3.5" />
                   <span>
                     {note.metadata.promotedToSpace
-                      ? "Sadece Yorum Olarak Tut"
-                      : "Ayrı Not Yap"}
+                      ? "Keep as Comment Only"
+                      : "Promote to Note"}
                   </span>
                 </button>
               )}
@@ -608,8 +608,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 <FileText className="h-3.5 w-3.5" />
                 <span>
                   {note.metadata.showRawOnly
-                    ? "AI Özetini Göster"
-                    : "Ham Girdi Olarak Göster"}
+                    ? "Show AI Summary"
+                    : "Show Raw Input"}
                 </span>
               </button>
               <button
@@ -621,7 +621,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-100"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                <span>Yeniden Analiz Et</span>
+                <span>Re-analyze with AI</span>
               </button>
               <button
                 type="button"
@@ -637,7 +637,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                <span>Notu Sil</span>
+                <span>Delete Note</span>
               </button>
             </div>
           </div>
@@ -664,7 +664,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             setSidebarOpen(false);
             setMobileDrawerOpen(false);
           }}
-          title="Kenar çubuğunu gizle"
+          title="Hide sidebar"
           className="rounded-full p-1.5 text-zinc-500 hover:bg-zinc-200/70 hover:text-zinc-900"
         >
           <PanelLeftClose className="h-4 w-4" />
@@ -683,23 +683,23 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           className="flex w-full items-center gap-2.5 rounded-full bg-[#e8eef7] px-4 py-2.5 text-xs font-medium text-zinc-900 transition hover:bg-[#dce5f2]"
         >
           <SquarePen className="h-4 w-4 text-blue-600" />
-          <span>Yeni Not / Ajan</span>
+          <span>New Note / Agent</span>
         </button>
       </div>
 
-      {/* Scrollable Sidebar Body: Projects + Categories + Notes */}
+      {/* Scrollable Sidebar Body: Projects + Spaces + Notes */}
       <div className="flex-1 overflow-y-auto px-3 space-y-4 pb-3">
         {/* 1. Projects Section */}
         <section className="pt-1">
           <div className="mb-1.5 flex items-center justify-between px-1.5">
             <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               <FolderKanban className="h-3.5 w-3.5" />
-              <span>Projeler</span>
+              <span>Projects</span>
             </span>
             <button
               type="button"
               onClick={() => setAddingProject((v) => !v)}
-              title="Yeni Proje Oluştur"
+              title="New Project"
               className="rounded-full p-1 text-zinc-500 hover:bg-zinc-200/70 hover:text-blue-600"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -717,7 +717,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 maxLength={40}
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="Proje adı (örn: SaaS Fikrim)"
+                placeholder="Project name (e.g. SaaS Idea)"
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
               />
               <input
@@ -725,7 +725,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 maxLength={140}
                 value={newProjectDesc}
                 onChange={(e) => setNewProjectDesc(e.target.value)}
-                placeholder="AI için kısa bağlam (isteğe bağlı)"
+                placeholder="Short AI context (optional)"
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
               />
               <div className="flex justify-end gap-1.5">
@@ -734,13 +734,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   onClick={() => setAddingProject(false)}
                   className="rounded-lg px-2 py-1 text-[11px] text-zinc-500 hover:bg-zinc-100"
                 >
-                  İptal
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-zinc-800"
                 >
-                  Ekle
+                  Add
                 </button>
               </div>
             </form>
@@ -790,7 +790,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                             totalNotesCount: totalInProject,
                           });
                         }}
-                        title="Projeyi Sil"
+                        title="Delete Project"
                         className="hidden rounded p-0.5 text-zinc-400 hover:text-rose-600 group-hover:inline-flex"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -803,17 +803,17 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           </div>
         </section>
 
-        {/* 2. Categories / Spaces (Moved cleanly from top header into sidebar) */}
+        {/* 2. Spaces Section */}
         <section className="border-t border-zinc-200/80 pt-3">
           <div className="mb-1.5 flex items-center justify-between px-1.5">
             <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
               <Layers className="h-3.5 w-3.5" />
-              <span>Başlıklar</span>
+              <span>Spaces</span>
             </span>
             <button
               type="button"
               onClick={() => setAddingSpace((v) => !v)}
-              title="Yeni Başlık Aç"
+              title="New Space"
               className="rounded-full p-1 text-zinc-500 hover:bg-zinc-200/70 hover:text-blue-600"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -831,7 +831,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 maxLength={36}
                 value={newSpaceName}
                 onChange={(e) => setNewSpaceName(e.target.value)}
-                placeholder="Başlık adı (örn: Yatırım)"
+                placeholder="Space name (e.g. Finance)"
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
               />
               <input
@@ -839,7 +839,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 maxLength={120}
                 value={newSpaceDesc}
                 onChange={(e) => setNewSpaceDesc(e.target.value)}
-                placeholder="AI için ipucu (isteğe bağlı)"
+                placeholder="Hint for AI (optional)"
                 className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
               />
               <div className="flex justify-end gap-1.5">
@@ -848,13 +848,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   onClick={() => setAddingSpace(false)}
                   className="rounded-lg px-2 py-1 text-[11px] text-zinc-500 hover:bg-zinc-100"
                 >
-                  İptal
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-zinc-800"
                 >
-                  Aç
+                  Create
                 </button>
               </div>
             </form>
@@ -874,7 +874,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   : "text-zinc-600 hover:bg-zinc-200/50"
               }`}
             >
-              <span>Tümü</span>
+              <span>All</span>
               <span className="text-[11px] text-zinc-400">
                 {visibleProjectNotes.length}
               </span>
@@ -918,7 +918,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                             noteCount: spaceNoteCount,
                           });
                         }}
-                        title="Başlığı Sil"
+                        title="Delete Space"
                         className="hidden rounded p-0.5 text-zinc-400 hover:text-rose-600 group-hover:inline-flex"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -935,7 +935,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
         <section className="border-t border-zinc-200/80 pt-3">
           <div className="mb-2 flex items-center justify-between px-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              Notlar
+              Notes
             </span>
             {focusedNoteId && (
               <button
@@ -943,7 +943,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 onClick={() => setFocusedNoteId(null)}
                 className="text-[11px] font-medium text-blue-600 hover:underline"
               >
-                Liste
+                List
               </button>
             )}
           </div>
@@ -954,7 +954,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Ara..."
+              placeholder="Search..."
               className="w-full rounded-xl border border-zinc-200/90 bg-white py-1.5 pl-8 pr-2.5 text-xs text-zinc-800 placeholder:text-zinc-400 focus:border-blue-400 focus:outline-none"
             />
           </div>
@@ -962,7 +962,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           <div className="space-y-0.5">
             {filteredNotes.length === 0 ? (
               <p className="px-2 py-4 text-center text-[11px] text-zinc-400">
-                Henüz not yok.
+                No notes yet.
               </p>
             ) : (
               filteredNotes.map((n) => {
@@ -1008,14 +1008,14 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
           className="flex flex-1 items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-200/60"
         >
           <Settings className="h-4 w-4 text-blue-600" />
-          <span>Bağlam & AI</span>
+          <span>Context & AI</span>
         </button>
 
         {settings?.passwordProtectionEnabled && (
           <button
             type="button"
             onClick={() => void handleLogout()}
-            title="Kilitle / Çıkış"
+            title="Lock / Sign Out"
             className="flex h-8 w-8 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-200/60 hover:text-zinc-800"
           >
             <LogOut className="h-4 w-4" />
@@ -1052,14 +1052,14 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
 
       {/* Center Clean White Canvas */}
       <div className="flex flex-1 flex-col min-w-0 h-full bg-white">
-        {/* Ultra-minimal Top Header (No bulky category tabs!) */}
+        {/* Ultra-minimal Top Header */}
         <header className="flex items-center justify-between gap-2 px-5 py-3.5">
           <div className="flex items-center gap-2.5 min-w-0">
             {!sidebarOpen && (
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                title="Kenar çubuğunu aç"
+                title="Open sidebar"
                 className="hidden md:flex rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
               >
                 <PanelLeftOpen className="h-4 w-4" />
@@ -1098,7 +1098,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                       : "text-zinc-500 hover:text-zinc-800"
                   }`}
                 >
-                  Özetli
+                  Summary
                 </button>
                 <button
                   type="button"
@@ -1109,7 +1109,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                       : "text-zinc-500 hover:text-zinc-800"
                   }`}
                 >
-                  Başlık
+                  Titles
                 </button>
                 <button
                   type="button"
@@ -1120,14 +1120,14 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                       : "text-zinc-500 hover:text-zinc-800"
                   }`}
                 >
-                  Ham Girdiler
+                  Raw Inputs
                 </button>
               </div>
             )}
             {hasProcessingNotes && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-medium text-blue-700">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                Ajan işliyor
+                Agent running
               </span>
             )}
             <button
@@ -1154,12 +1154,13 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
               <span className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4 shrink-0 text-amber-600" />
                 <span>
-                  AI özetleme ve sesli not için <strong>Bağlam & AI</strong>{" "}
-                  ayarlarından Gemini veya OpenAI API anahtarınızı ekleyin.
+                  Connect a Gemini or OpenAI API key in{" "}
+                  <strong>Context & AI</strong> to enable AI summaries and voice
+                  transcription.
                 </span>
               </span>
               <span className="shrink-0 rounded-full bg-amber-200/70 px-3 py-1 font-semibold text-amber-900">
-                Ekle →
+                Connect →
               </span>
             </button>
           )}
@@ -1185,7 +1186,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 </h2>
                 <p className="text-sm text-zinc-500 max-w-md mx-auto">
                   {activeProject.description ||
-                    "Aklına geleni tek kelimeyle yaz veya sesle bırak — arka plandaki ajan araştırıp düzenlesin."}
+                    "Drop a single word, half-baked task, or voice memo — the background agent researches and organizes it for you."}
                 </p>
               </div>
 
@@ -1201,21 +1202,21 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 onError={(msg) => setToastError(msg)}
               />
 
-              {projectNotes.length > 0 && (
+              {visibleProjectNotes.length > 0 && (
                 <div className="text-center">
                   <button
                     type="button"
                     onClick={() => setComposeHeroMode(false)}
                     className="text-xs text-zinc-500 hover:text-zinc-900 underline underline-offset-4"
                   >
-                    Bu projedeki {projectNotes.length} nota dön
+                    Back to {visibleProjectNotes.length} note(s) in this project
                   </button>
                 </div>
               )}
             </div>
           </main>
         ) : focusedNote ? (
-          /* Distraction-Free Focused Note Reading View (No heavy card!) */
+          /* Distraction-Free Focused Note Reading View */
           <>
             <main className="flex-1 overflow-y-auto px-5 py-6">
               <div className="mx-auto w-full max-w-2xl space-y-6">
@@ -1263,12 +1264,12 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                         {focusedNote.metadata.promotedToSpace ? (
                           <>
                             <Check className="h-3.5 w-3.5" />
-                            <span>Ayrı Not</span>
+                            <span>Standalone Note</span>
                           </>
                         ) : (
                           <>
                             <ArrowUpRight className="h-3.5 w-3.5" />
-                            <span>Ayrı Not Yap</span>
+                            <span>Promote to Note</span>
                           </>
                         )}
                       </button>
@@ -1289,8 +1290,8 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                       <FileText className="h-3.5 w-3.5" />
                       <span>
                         {focusedNote.metadata.showRawOnly
-                          ? "AI Özetini Göster"
-                          : "Ham Girdi Göster"}
+                          ? "Show AI Summary"
+                          : "Show Raw Input"}
                       </span>
                     </button>
                     {renderNoteActionsMenu(focusedNote)}
@@ -1302,9 +1303,9 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
                       <span>
-                        AI Önerisi: Bu not için{" "}
-                        <strong>&ldquo;{focusedNote.suggestedSpace}&rdquo;</strong>{" "}
-                        başlığı açılsın mı?
+                        AI Suggestion: Create space{" "}
+                        <strong>&ldquo;{focusedNote.suggestedSpace}&rdquo;</strong>
+                        ?
                       </span>
                     </span>
                     <div className="flex items-center gap-2">
@@ -1318,7 +1319,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                         }
                         className="rounded-full bg-indigo-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700"
                       >
-                        + Aç ve Taşı
+                        + Create & Move
                       </button>
                       <button
                         type="button"
@@ -1329,7 +1330,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                         }
                         className="text-[11px] text-indigo-700 hover:underline"
                       >
-                        Yoksay
+                        Dismiss
                       </button>
                     </div>
                   </div>
@@ -1339,10 +1340,10 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-xs text-zinc-500">
                       <span>
-                        {spaceMap.get(focusedNote.spaceId)?.name || "Not"}
+                        {spaceMap.get(focusedNote.spaceId)?.name || "Note"}
                       </span>
                       <span>•</span>
-                      <span>Ham Girdi Görünümü</span>
+                      <span>Raw Input View</span>
                     </div>
 
                     <h1 className="font-editorial text-3xl sm:text-4xl leading-tight text-zinc-900 whitespace-pre-wrap">
@@ -1352,182 +1353,179 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                 ) : (
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                    <span>
-                      {spaceMap.get(focusedNote.spaceId)?.name || "Not"}
-                    </span>
-                    {focusedNote.metadata.categoryTag && (
-                      <>
-                        <span>•</span>
-                        <span className="text-blue-700 font-medium">
-                          {focusedNote.metadata.categoryTag}
-                        </span>
-                      </>
-                    )}
-                    {focusedNote.metadata.dueDate && (
-                      <>
-                        <span>•</span>
-                        <span className="inline-flex items-center gap-1 text-amber-700">
-                          <Calendar className="h-3 w-3" />
-                          {focusedNote.metadata.dueDate}
-                        </span>
-                      </>
-                    )}
-                    {focusedNote.inputType === "voice" && (
-                      <>
-                        <span>•</span>
-                        <span className="inline-flex items-center gap-1">
-                          <Mic className="h-3 w-3 text-blue-600" />
-                          Sesli not
-                        </span>
-                      </>
-                    )}
-                  </div>
+                      <span>
+                        {spaceMap.get(focusedNote.spaceId)?.name || "Note"}
+                      </span>
+                      {focusedNote.metadata.categoryTag && (
+                        <>
+                          <span>•</span>
+                          <span className="text-blue-700 font-medium">
+                            {focusedNote.metadata.categoryTag}
+                          </span>
+                        </>
+                      )}
+                      {focusedNote.metadata.dueDate && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 text-amber-700">
+                            <Calendar className="h-3 w-3" />
+                            {focusedNote.metadata.dueDate}
+                          </span>
+                        </>
+                      )}
+                      {focusedNote.inputType === "voice" && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Mic className="h-3 w-3 text-blue-600" />
+                            Voice note
+                          </span>
+                        </>
+                      )}
+                    </div>
 
-                  <div className="flex items-start gap-3">
-                    {spaceMap.get(focusedNote.spaceId)?.kind === "tasks" && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void handlePatchNote(focusedNote.id, {
-                            toggleCompleted: true,
-                          })
-                        }
-                        className={`mt-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                    <div className="flex items-start gap-3">
+                      {spaceMap.get(focusedNote.spaceId)?.kind === "tasks" && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handlePatchNote(focusedNote.id, {
+                              toggleCompleted: true,
+                            })
+                          }
+                          className={`mt-2 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                            focusedNote.metadata.isCompleted
+                              ? "border-emerald-600 bg-emerald-600 text-white"
+                              : "border-zinc-300 bg-white hover:border-emerald-600"
+                          }`}
+                        >
+                          {focusedNote.metadata.isCompleted && (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
+
+                      <h1
+                        className={`font-editorial text-3xl sm:text-4xl leading-tight ${
                           focusedNote.metadata.isCompleted
-                            ? "border-emerald-600 bg-emerald-600 text-white"
-                            : "border-zinc-300 bg-white hover:border-emerald-600"
+                            ? "line-through text-zinc-400"
+                            : "text-zinc-900"
                         }`}
                       >
-                        {focusedNote.metadata.isCompleted && (
-                          <Check className="h-3.5 w-3.5" />
+                        {focusedNote.title}
+                      </h1>
+                    </div>
+
+                    {(focusedNote.status === "processing" ||
+                      focusedNote.summary) && (
+                      <p className="text-[15px] leading-relaxed text-zinc-700">
+                        {focusedNote.status === "processing" ? (
+                          <span className="inline-flex items-center gap-2 text-blue-600">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {focusedNote.summary}
+                          </span>
+                        ) : (
+                          renderHighlightedText(focusedNote.summary)
                         )}
-                      </button>
+                      </p>
                     )}
 
-                    <h1
-                      className={`font-editorial text-3xl sm:text-4xl leading-tight ${
-                        focusedNote.metadata.isCompleted
-                          ? "line-through text-zinc-400"
-                          : "text-zinc-900"
-                      }`}
-                    >
-                      {focusedNote.title}
-                    </h1>
-                  </div>
+                    {focusedNote.metadata.officialUrl && (
+                      <a
+                        href={focusedNote.metadata.officialUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span>{focusedNote.metadata.officialUrl}</span>
+                      </a>
+                    )}
 
-                  {(focusedNote.status === "processing" ||
-                    focusedNote.summary) && (
-                    <p className="text-[15px] leading-relaxed text-zinc-700">
-                      {focusedNote.status === "processing" ? (
-                        <span className="inline-flex items-center gap-2 text-blue-600">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {focusedNote.summary}
+                    {focusedNote.metadata.projectUseCase && (
+                      <div className="border-l-2 border-emerald-500 pl-4 py-1 text-sm text-zinc-700">
+                        <span className="block text-[11px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">
+                          Project Use Case
                         </span>
-                      ) : (
-                        renderHighlightedText(focusedNote.summary)
-                      )}
-                    </p>
-                  )}
-
-                  {focusedNote.metadata.officialUrl && (
-                    <a
-                      href={focusedNote.metadata.officialUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span>{focusedNote.metadata.officialUrl}</span>
-                    </a>
-                  )}
-
-                  {focusedNote.metadata.projectUseCase && (
-                    <div className="border-l-2 border-emerald-500 pl-4 py-1 text-sm text-zinc-700">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">
-                        Projendeki Kullanımı
-                      </span>
-                      {focusedNote.metadata.projectUseCase}
-                    </div>
-                  )}
-
-                  {focusedNote.metadata.nextStep && (
-                    <div className="border-l-2 border-blue-500 pl-4 py-1 text-sm text-zinc-700">
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">
-                        İlk Adım
-                      </span>
-                      {focusedNote.metadata.nextStep}
-                    </div>
-                  )}
-
-                  {focusedNote.metadata.subtasks &&
-                    focusedNote.metadata.subtasks.length > 0 && (
-                      <div className="pt-2 space-y-2">
-                        <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                          Alt Adımlar
-                        </div>
-                        <ul className="divide-y divide-zinc-100">
-                          {focusedNote.metadata.subtasks.map((st) => (
-                            <li
-                              key={st.id}
-                              onClick={() =>
-                                void handlePatchNote(focusedNote.id, {
-                                  toggleSubtaskId: st.id,
-                                })
-                              }
-                              className="flex cursor-pointer items-center gap-3 py-2.5 text-sm text-zinc-700 hover:text-zinc-950"
-                            >
-                              <span
-                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                  st.done
-                                    ? "border-emerald-600 bg-emerald-600 text-white"
-                                    : "border-zinc-300"
-                                }`}
-                              >
-                                {st.done && <Check className="h-3 w-3" />}
-                              </span>
-                              <span
-                                className={
-                                  st.done ? "line-through text-zinc-400" : ""
-                                }
-                              >
-                                {st.text}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
+                        {focusedNote.metadata.projectUseCase}
                       </div>
                     )}
 
-                  <div className="border-t border-zinc-100 pt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
-                    <span>Ham girdi: &ldquo;{focusedNote.rawText}&rdquo;</span>
-                    {focusedNote.providerUsed === "raw-only" && (
-                      <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] text-zinc-500">
-                        Sadece Ham Not
-                      </span>
+                    {focusedNote.metadata.nextStep && (
+                      <div className="border-l-2 border-blue-500 pl-4 py-1 text-sm text-zinc-700">
+                        <span className="block text-[11px] font-semibold uppercase tracking-wider text-blue-700 mb-0.5">
+                          Next Step
+                        </span>
+                        {focusedNote.metadata.nextStep}
+                      </div>
                     )}
-                  </div>
+
+                    {focusedNote.metadata.subtasks &&
+                      focusedNote.metadata.subtasks.length > 0 && (
+                        <div className="pt-2 space-y-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Subtasks
+                          </div>
+                          <ul className="divide-y divide-zinc-100">
+                            {focusedNote.metadata.subtasks.map((st) => (
+                              <li
+                                key={st.id}
+                                onClick={() =>
+                                  void handlePatchNote(focusedNote.id, {
+                                    toggleSubtaskId: st.id,
+                                  })
+                                }
+                                className="flex cursor-pointer items-center gap-3 py-2.5 text-sm text-zinc-700 hover:text-zinc-950"
+                              >
+                                <span
+                                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                    st.done
+                                      ? "border-emerald-600 bg-emerald-600 text-white"
+                                      : "border-zinc-300"
+                                  }`}
+                                >
+                                  {st.done && <Check className="h-3 w-3" />}
+                                </span>
+                                <span
+                                  className={
+                                    st.done ? "line-through text-zinc-400" : ""
+                                  }
+                                >
+                                  {st.text}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                    <div className="border-t border-zinc-100 pt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
+                      <span>Raw input: &ldquo;{focusedNote.rawText}&rdquo;</span>
+                      {focusedNote.providerUsed === "raw-only" && (
+                        <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] text-zinc-500">
+                          Raw Only
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* Nested Child Notes / Threaded Comments Section (Grouped by Heading) */}
-                <section className="border-t border-zinc-200/80 pt-6 space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-zinc-700">
-                      <MessageSquare className="h-4 w-4 text-zinc-400" />
-                      <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                        Alt Notlar & Yorumlar
-                      </h2>
-                      <span className="font-mono text-[11px] text-zinc-400">
-                        {focusedChildren.length}
-                      </span>
-                    </div>
+                {/* Nested Comments / Sub-notes Section */}
+                <section className="border-t border-zinc-200/80 pt-6 space-y-4">
+                  <div className="flex items-center gap-2 text-zinc-700">
+                    <MessageSquare className="h-4 w-4 text-zinc-400" />
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Comments & Sub-notes
+                    </h2>
+                    <span className="font-mono text-[11px] text-zinc-400">
+                      {focusedChildren.length}
+                    </span>
                   </div>
 
                   {focusedChildren.length === 0 ? (
                     <p className="text-xs text-zinc-400">
-                      Bu notun altına henüz yorum eklenmemiş. Aşağıdaki kutudan
-                      yorum ekleyebilir, istersen sonradan &ldquo;Ayrı not
-                      yap&rdquo; ile ana listeye çıkarabilirsin.
+                      No comments yet. Add a comment below, and promote it to a
+                      standalone note anytime if needed.
                     </p>
                   ) : (
                     <div className="divide-y divide-zinc-100 border-l-2 border-zinc-200 pl-3.5">
@@ -1630,7 +1628,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                   className="hidden sm:inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-600 opacity-0 transition hover:border-blue-300 hover:text-blue-700 group-hover:opacity-100"
                                 >
                                   <ArrowUpRight className="h-3 w-3" />
-                                  <span>Ayrı not yap</span>
+                                  <span>Promote to note</span>
                                 </button>
                               )}
                               <div className="opacity-60 group-hover:opacity-100">
@@ -1664,7 +1662,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
             </div>
           </>
         ) : (
-          /* Clean Sectioned List View (Tümü groups all spaces; single space uses the same clean structure) */
+          /* Clean Sectioned List View */
           <>
             <main className="flex-1 overflow-y-auto px-5 py-3">
               <div className="mx-auto w-full max-w-3xl space-y-8 pb-4">
@@ -1674,7 +1672,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                   </div>
                 ) : filteredNotes.length === 0 ? (
                   <div className="py-16 text-center text-sm text-zinc-400">
-                    Bu başlıkta henüz not yok. Aşağıdaki kutudan ekleyebilirsiniz.
+                    No notes in this space yet. Capture one below.
                   </div>
                 ) : (
                   groupedSections.map(({ space: sp, items }) => {
@@ -1683,7 +1681,6 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
 
                     return (
                       <section key={sp.id} className="space-y-1">
-                        {/* Clean Section Header */}
                         <div className="flex items-center justify-between border-b border-zinc-200/80 pb-2">
                           <div className="flex items-center gap-2 text-zinc-800">
                             <span className="text-zinc-400">
@@ -1698,7 +1695,6 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                           </div>
                         </div>
 
-                        {/* Compact, High-Clarity Rows under Each Heading */}
                         <div className="divide-y divide-zinc-100">
                           {items.map((note) => {
                             const isDone = Boolean(note.metadata.isCompleted);
@@ -1800,7 +1796,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                               setFocusedNoteId(note.parentId);
                                             }}
                                             className="inline-flex shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600 hover:bg-zinc-200"
-                                            title="Üst nota git"
+                                            title="Go to parent note"
                                           >
                                             <CornerDownRight className="h-2.5 w-2.5" />
                                             <span className="max-w-[110px] truncate">
@@ -1820,9 +1816,10 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
                                         </span>
                                       )}
 
-                                      {!isRaw && note.status === "processing" && (
-                                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
-                                      )}
+                                      {!isRaw &&
+                                        note.status === "processing" && (
+                                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-blue-600" />
+                                        )}
                                     </div>
 
                                     {!isRaw &&

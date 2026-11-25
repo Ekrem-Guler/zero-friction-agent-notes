@@ -12,7 +12,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -20,7 +20,7 @@ export async function PATCH(
   const existing = await db.select().from(notes).where(eq(notes.id, id));
   const row = existing[0];
   if (!row) {
-    return NextResponse.json({ error: "Not bulunamadı." }, { status: 404 });
+    return NextResponse.json({ error: "Note not found." }, { status: 404 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -38,7 +38,7 @@ export async function PATCH(
     const rl = checkRateLimit("reprocess:owner");
     if (!rl.allowed) {
       return NextResponse.json(
-        { error: `Lütfen ${rl.retryAfterSeconds} sn bekleyin.` },
+        { error: `Please wait ${rl.retryAfterSeconds}s.` },
         { status: 429 }
       );
     }
@@ -47,7 +47,7 @@ export async function PATCH(
       .update(notes)
       .set({
         status: "processing",
-        summary: "Yeniden analiz ediliyor...",
+        summary: "Re-analyzing...",
         updatedAt: Date.now(),
       })
       .where(eq(notes.id, id));
@@ -109,7 +109,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { id } = await context.params;

@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const rl = checkRateLimit(`auth:${ip}`);
   if (!rl.allowed) {
     return NextResponse.json(
-      { error: `Çok fazla deneme. ${rl.retryAfterSeconds} sn bekleyin.` },
+      { error: `Too many attempts. Please wait ${rl.retryAfterSeconds}s.` },
       { status: 429 }
     );
   }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   const password = body.password || "";
 
   if (!verifyPassword(password)) {
-    return NextResponse.json({ error: "Hatalı giriş şifresi." }, { status: 401 });
+    return NextResponse.json({ error: "Invalid password." }, { status: 401 });
   }
 
   const token = computeSessionToken(process.env.APP_PASSWORD!);

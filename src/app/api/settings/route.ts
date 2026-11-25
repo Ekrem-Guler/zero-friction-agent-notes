@@ -8,7 +8,7 @@ import type { ClientSettings } from "@/lib/serializers";
 
 export async function PUT(request: Request) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {

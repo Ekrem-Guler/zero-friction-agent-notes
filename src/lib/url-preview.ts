@@ -83,7 +83,7 @@ export async function fetchSafeUrlSnippet(url: string): Promise<string | null> {
     const description = clean(descMatch?.[1]);
     if (!title && !description) return null;
 
-    return `URL: ${url}\nSayfa Başlığı: ${title}\nSayfa Açıklaması: ${description}`;
+    return `URL: ${url}\nPage Title: ${title}\nPage Description: ${description}`;
   } catch {
     return null;
   }

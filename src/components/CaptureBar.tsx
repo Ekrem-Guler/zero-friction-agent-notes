@@ -127,14 +127,14 @@ export function CaptureBar({
       };
       if (!res.ok || !data.note) {
         setText(previousText);
-        onError(data.error || "Not gönderilemedi.");
+        onError(data.error || "Failed to send note.");
         return;
       }
       onNoteCreated(data.note);
       inputRef.current?.focus();
     } catch {
       setText(previousText);
-      onError("Ağ hatası oluştu.");
+      onError("Network error occurred.");
     } finally {
       setSubmittingText(false);
     }
@@ -153,7 +153,7 @@ export function CaptureBar({
       typeof navigator === "undefined" ||
       !navigator.mediaDevices?.getUserMedia
     ) {
-      onError("Tarayıcınız mikrofon kaydını desteklemiyor.");
+      onError("Your browser does not support audio recording.");
       return;
     }
 
@@ -208,7 +208,7 @@ export function CaptureBar({
         });
       }, 1000);
     } catch {
-      onError("Mikrofon izni alınamadı.");
+      onError("Microphone permission denied.");
     }
   }
 
@@ -242,12 +242,12 @@ export function CaptureBar({
         error?: string;
       };
       if (!res.ok || !data.note) {
-        onError(data.error || "Sesli not çözümlenemedi.");
+        onError(data.error || "Could not transcribe voice note.");
         return;
       }
       onNoteCreated(data.note);
     } catch {
-      onError("Sesli not yüklenirken bağlantı hatası oluştu.");
+      onError("Connection error while uploading voice note.");
     } finally {
       setUploadingVoice(false);
     }
@@ -267,7 +267,7 @@ export function CaptureBar({
             </span>
             <div>
               <p className="text-sm font-medium text-zinc-900">
-                Sesli not dinleniyor...
+                Listening to voice note...
               </p>
               <p className="text-xs font-mono text-zinc-500">
                 {formatSeconds(recordingSeconds)} / 00:{MAX_VOICE_SECONDS}
@@ -282,7 +282,7 @@ export function CaptureBar({
               className="flex items-center gap-1.5 rounded-full border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
             >
               <X className="h-3.5 w-3.5" />
-              <span>İptal</span>
+              <span>Cancel</span>
             </button>
             <button
               type="button"
@@ -290,14 +290,14 @@ export function CaptureBar({
               className="flex items-center gap-1.5 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700"
             >
               <Square className="h-3 w-3 fill-current" />
-              <span>Bitir & Gönder</span>
+              <span>Stop & Send</span>
             </button>
           </div>
         </div>
       ) : uploadingVoice ? (
         <div className="flex items-center justify-center gap-2.5 py-2.5 text-sm text-blue-600">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Ses kaydı AI tarafından yazıya dökülüyor...</span>
+          <span>Transcribing voice note with AI...</span>
         </div>
       ) : (
         <>
@@ -311,8 +311,8 @@ export function CaptureBar({
             onKeyDown={handleTextareaKeyDown}
             placeholder={
               parentNoteTitle
-                ? `"${parentNoteTitle}" altına alt not veya yorum ekleyin...`
-                : `${activeProjectName} için bir not, araç adı veya görev yazın...`
+                ? `Add a comment or sub-note under "${parentNoteTitle}"...`
+                : `Capture a note, tool, or task for ${activeProjectName}...`
             }
             className="w-full resize-none bg-transparent py-1 text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-500 focus:outline-none"
           />
@@ -329,19 +329,19 @@ export function CaptureBar({
                 }`}
                 title={
                   useAi
-                    ? "AI özetleme ve sınıflandırma aktif"
-                    : "Yapay zeka kapalı — sadece ham not kaydedilir"
+                    ? "AI enrichment and classification enabled"
+                    : "AI disabled — saves raw text only"
                 }
               >
                 {useAi ? (
                   <>
                     <Sparkles className="h-3 w-3 text-blue-600" />
-                    <span>AI Ajanı</span>
+                    <span>AI Agent</span>
                   </>
                 ) : (
                   <>
                     <FileText className="h-3 w-3 text-zinc-700" />
-                    <span>Sadece Ham</span>
+                    <span>Raw Only</span>
                   </>
                 )}
               </button>
@@ -369,7 +369,7 @@ export function CaptureBar({
               <button
                 type="button"
                 onClick={startRecording}
-                title="Sesli Not (Maks. 45 sn)"
+                title="Voice Note (Max 45s)"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 transition hover:bg-zinc-200/70 hover:text-blue-600"
               >
                 <Mic className="h-[18px] w-[18px]" />
@@ -379,7 +379,7 @@ export function CaptureBar({
                 type="button"
                 onClick={() => void submitNote()}
                 disabled={!text.trim() || submittingText}
-                title="Gönder"
+                title="Send"
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 text-white transition hover:bg-blue-600 disabled:bg-zinc-300 disabled:text-zinc-500"
               >
                 {submittingText ? (

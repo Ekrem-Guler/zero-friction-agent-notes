@@ -27,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "ZeroNote — AI Note & Research Agent",
   description:
-    "Sıfır sürtünmeli yapay zeka not, görev ve araştırma ajanı. Sadece yaz ve çık.",
+    "Zero-friction AI note, task, and research agent. Just capture and go.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -53,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="tr"
+      lang="en"
       className={`${plusJakarta.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-white text-zinc-900 selection:bg-blue-100 selection:text-blue-900">

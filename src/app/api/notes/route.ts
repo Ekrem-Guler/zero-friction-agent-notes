@@ -9,7 +9,7 @@ import { serializeNote } from "@/lib/serializers";
 
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const ip =
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!rl.allowed) {
     return NextResponse.json(
       {
-        error: `Hız sınırı aşıldı (dakikada en fazla ${SECURITY_LIMITS.RATE_LIMIT_MAX_REQUESTS} not). Lütfen ${rl.retryAfterSeconds} sn bekleyin.`,
+        error: `Rate limit reached (max ${SECURITY_LIMITS.RATE_LIMIT_MAX_REQUESTS} notes/min). Please wait ${rl.retryAfterSeconds}s.`,
       },
       { status: 429 }
     );
@@ -34,12 +34,12 @@ export async function POST(request: Request) {
 
   const trimmed = (body.text || "").trim();
   if (!trimmed) {
-    return NextResponse.json({ error: "Boş not gönderilemez." }, { status: 400 });
+    return NextResponse.json({ error: "Note cannot be empty." }, { status: 400 });
   }
   if (trimmed.length > SECURITY_LIMITS.MAX_TEXT_CHARS) {
     return NextResponse.json(
       {
-        error: `Hızlı not sınırı en fazla ${SECURITY_LIMITS.MAX_TEXT_CHARS} karakterdir.`,
+        error: `Quick notes are limited to ${SECURITY_LIMITS.MAX_TEXT_CHARS} characters.`,
       },
       { status: 400 }
     );
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     status: useAi ? "processing" : "completed",
     title:
       useAi && trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed,
-    summary: useAi ? "Yapay zeka ajanı analiz ediyor..." : "",
+    summary: useAi ? "AI agent is analyzing..." : "",
     metadataJson: "{}",
     suggestedSpace: null,
     providerUsed: useAi ? "pending" : "raw-only",

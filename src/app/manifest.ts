@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "ZeroNote — AI Note & Research Agent",
     short_name: "ZeroNote",
     description:
-      "Yaz ve çık: Yarım notları ve ses kayıtlarını otomatik anlamlandıran minimalist AI not ajanı.",
+      "Capture and go: Minimalist AI note agent that classifies, researches, and organizes your quick notes and voice memos.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",

@@ -93,13 +93,13 @@ export function ConfirmDialog({
             <div>
               <h3 className="text-base font-semibold text-zinc-900">
                 {dialog.kind === "note"
-                  ? "Notu Sil"
+                  ? "Delete Note"
                   : dialog.kind === "space"
-                    ? "Başlığı Sil"
-                    : "Projeyi Sil"}
+                    ? "Delete Space"
+                    : "Delete Project"}
               </h3>
               <p className="text-xs text-zinc-500">
-                Bu işlem geri alınamaz.
+                This action cannot be undone.
               </p>
             </div>
           </div>
@@ -117,16 +117,17 @@ export function ConfirmDialog({
           {dialog.kind === "note" && (
             <>
               <p>
+                Are you sure you want to delete{" "}
                 <strong className="text-zinc-900">
                   &ldquo;{dialog.title}&rdquo;
-                </strong>{" "}
-                notunu silmek istediğinize emin misiniz?
+                </strong>
+                ?
               </p>
               {dialog.childCount > 0 && (
                 <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  Bu notun altında <strong>{dialog.childCount}</strong> yorum/alt
-                  not bulunuyor. Üst not silindiğinde alt yorumlar silinmez,
-                  bağımsız olarak korunur.
+                  This note has <strong>{dialog.childCount}</strong> nested
+                  comment(s). Deleting the parent will preserve those comments
+                  as standalone items.
                 </p>
               )}
             </>
@@ -134,14 +135,15 @@ export function ConfirmDialog({
 
           {dialog.kind === "space" && (
             <p>
+              Are you sure you want to delete the{" "}
               <strong className="text-zinc-900">
                 &ldquo;{dialog.name}&rdquo;
               </strong>{" "}
-              başlığını silmek istediğinize emin misiniz?
+              space?
               {dialog.noteCount > 0 && (
                 <span className="block mt-1.5 text-xs text-zinc-500">
-                  İçindeki {dialog.noteCount} not silinmez,{" "}
-                  <strong>Fikirler</strong> başlığına aktarılır.
+                  Its {dialog.noteCount} note(s) will not be deleted and will be
+                  moved to <strong>Ideas</strong>.
                 </span>
               )}
             </p>
@@ -150,20 +152,21 @@ export function ConfirmDialog({
           {dialog.kind === "project" && (
             <>
               <p>
+                You are about to delete{" "}
                 <strong className="text-zinc-900">
                   &ldquo;{dialog.name}&rdquo;
-                </strong>{" "}
-                projesini silmek üzeresiniz.
+                </strong>
+                .
               </p>
 
               {dialog.totalNotesCount > 0 ? (
                 <div className="space-y-2 pt-1">
                   <p className="text-xs text-zinc-500">
-                    Bu projenin içinde{" "}
+                    This project contains{" "}
                     <strong className="text-zinc-800">
-                      {dialog.totalNotesCount} not/yorum
-                    </strong>{" "}
-                    var. Ne yapmak istersiniz?
+                      {dialog.totalNotesCount} note(s)/comment(s)
+                    </strong>
+                    . What would you like to do?
                   </p>
 
                   {/* Option 1: Move notes to another project */}
@@ -184,7 +187,7 @@ export function ConfirmDialog({
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-900">
                         <FolderInput className="h-3.5 w-3.5 text-blue-600" />
-                        <span>Notları başka projeye taşı ve sil</span>
+                        <span>Move notes to another project & delete</span>
                       </div>
                       {projectMode === "move" && otherProjects.length > 0 && (
                         <select
@@ -220,17 +223,18 @@ export function ConfirmDialog({
                     <div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700">
                         <Trash2 className="h-3.5 w-3.5" />
-                        <span>Projedeki tüm notları da kalıcı olarak sil</span>
+                        <span>Permanently delete all notes in this project</span>
                       </div>
                       <p className="mt-0.5 text-[11px] text-zinc-500">
-                        Bu projeye ait tüm notlar ve yorumlar tamamen silinir.
+                        Every note and comment inside this project will be
+                        permanently erased.
                       </p>
                     </div>
                   </label>
                 </div>
               ) : (
                 <p className="text-xs text-zinc-500">
-                  Bu projede hiç not yok. Doğrudan silinecek.
+                  This project is empty and will be removed immediately.
                 </p>
               )}
             </>
@@ -244,7 +248,7 @@ export function ConfirmDialog({
             disabled={busy}
             className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
           >
-            Vazgeç
+            Cancel
           </button>
           <button
             type="button"
@@ -261,8 +265,8 @@ export function ConfirmDialog({
               {dialog.kind === "project" &&
               dialog.totalNotesCount > 0 &&
               projectMode === "move"
-                ? "Taşı ve Sil"
-                : "Evet, Sil"}
+                ? "Move & Delete"
+                : "Delete"}
             </span>
           </button>
         </div>

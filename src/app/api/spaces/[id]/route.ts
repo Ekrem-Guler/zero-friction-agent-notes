@@ -9,7 +9,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -18,11 +18,11 @@ export async function DELETE(
   const space = rows[0];
 
   if (!space) {
-    return NextResponse.json({ error: "Başlık bulunamadı." }, { status: 404 });
+    return NextResponse.json({ error: "Space not found." }, { status: 404 });
   }
   if (space.isSystem) {
     return NextResponse.json(
-      { error: "Varsayılan çekirdek başlıklar silinemez." },
+      { error: "Default core spaces cannot be deleted." },
       { status: 400 }
     );
   }

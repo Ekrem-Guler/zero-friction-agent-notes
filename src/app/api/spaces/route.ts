@@ -8,7 +8,7 @@ import { serializeSpace } from "@/lib/serializers";
 
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   const name = (body.name || "").trim().slice(0, 36);
   if (!name) {
     return NextResponse.json(
-      { error: "Başlık adı boş olamaz." },
+      { error: "Space name cannot be empty." },
       { status: 400 }
     );
   }

@@ -9,7 +9,7 @@ import { serializeNote } from "@/lib/serializers";
 
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
   const ip =
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!rl.allowed) {
     return NextResponse.json(
       {
-        error: `Hız sınırı aşıldı. Lütfen ${rl.retryAfterSeconds} sn bekleyin.`,
+        error: `Rate limit reached. Please wait ${rl.retryAfterSeconds}s.`,
       },
       { status: 429 }
     );
@@ -37,19 +37,19 @@ export async function POST(request: Request) {
 
   if (!audioFile || !(audioFile instanceof Blob)) {
     return NextResponse.json(
-      { error: "Ses dosyası bulunamadı." },
+      { error: "Audio file not found." },
       { status: 400 }
     );
   }
 
   if (audioFile.size === 0) {
-    return NextResponse.json({ error: "Ses kaydı boş." }, { status: 400 });
+    return NextResponse.json({ error: "Audio recording is empty." }, { status: 400 });
   }
 
   if (audioFile.size > SECURITY_LIMITS.MAX_AUDIO_BYTES) {
     return NextResponse.json(
       {
-        error: `Ses dosyası çok büyük (maksimum ${SECURITY_LIMITS.MAX_AUDIO_SECONDS} saniye).`,
+        error: `Audio file is too large (max ${SECURITY_LIMITS.MAX_AUDIO_SECONDS} seconds).`,
       },
       { status: 400 }
     );
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     const tr = await transcribeVoiceNote(bytes, mimeType);
     if (!tr.transcript) {
       return NextResponse.json(
-        { error: "Ses kaydında anlaşılır konuşma tespit edilemedi." },
+        { error: "No clear speech detected in the recording." },
         { status: 422 }
       );
     }
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         tr.transcript.length > 60
           ? `${tr.transcript.slice(0, 57)}...`
           : tr.transcript,
-      summary: "Sesli not çözümlendi, ajan yapılandırıyor...",
+      summary: "Voice note transcribed, AI agent is structuring...",
       metadataJson: "{}",
       suggestedSpace: null,
       providerUsed: tr.providerUsed,
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     const message =
-      err instanceof Error ? err.message : "Sesli not işlenemedi.";
+      err instanceof Error ? err.message : "Failed to process voice note.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
