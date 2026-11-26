@@ -37,8 +37,13 @@ export const FREE_MONTHLY_AI_LIMIT = Math.max(
 );
 
 function isRetriableModelError(err: unknown): boolean {
+  const name = err instanceof Error ? err.name.toLowerCase() : "";
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
   return (
+    name.includes("abort") ||
+    name.includes("timeout") ||
+    msg.includes("aborted") ||
+    msg.includes("timed out") ||
     msg.includes("high demand") ||
     msg.includes("overloaded") ||
     msg.includes("unavailable") ||
@@ -330,7 +335,7 @@ function looksLikeToolOrConceptLookup(rawText: string): boolean {
   // 1-3 words without obvious task verbs
   if (wordCount <= 3 && trimmed.length <= 42) {
     const taskWords =
-      /\b(tomorrow|today|next week|meeting|presentation|buy|do|write|send|call|finish|check|pay|prepare|fix|yarın|bugün|toplantı|sunum)\b/i;
+      /\b(tomorrow|today|next week|meeting|presentation|buy|do|write|send|call|finish|check|pay|prepare|fix|research|yarın|bugün|toplantı|sunum|araştır|bak|incele)\b/i;
     return !taskWords.test(trimmed);
   }
   return false;
@@ -381,6 +386,7 @@ async function getOrFetchWebResearch(
             tools: {
               google_search: google.tools.googleSearch({}),
             },
+            abortSignal: AbortSignal.timeout(7_000),
             maxRetries: 0,
             maxOutputTokens: 400,
             prompt: `What is the software tool, company, or concept "${rawText.slice(0, 80)}"? What does it do, what is its official website, and what is its pricing model? Summarize in at most 3 concise English sentences.`,
@@ -449,6 +455,7 @@ export async function transcribeVoiceNote(
       (modelId, google) =>
         generateText({
           model: google(modelId),
+          abortSignal: AbortSignal.timeout(15_000),
           maxRetries: 0,
           maxOutputTokens: 400,
           messages: [
@@ -644,6 +651,7 @@ CLASSIFICATION RULES:
             output: Output.object({ schema: StructuredNoteSchema }),
             system: systemPrompt,
             prompt: userPrompt,
+            abortSignal: AbortSignal.timeout(12_000),
             maxRetries: 0,
             maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
           })
@@ -659,6 +667,7 @@ CLASSIFICATION RULES:
         output: Output.object({ schema: StructuredNoteSchema }),
         system: systemPrompt,
         prompt: userPrompt,
+        abortSignal: AbortSignal.timeout(15_000),
         maxRetries: 1,
         maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
       });

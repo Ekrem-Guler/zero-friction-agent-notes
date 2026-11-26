@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { ensureDbReady } from "@/db";
 import { appSettings, notes, projects, spaces } from "@/db/schema";
 import { isAuthenticated, isPasswordProtectionEnabled } from "@/lib/auth";
@@ -22,6 +22,18 @@ export async function GET() {
   }
 
   const db = await ensureDbReady();
+
+  // Watchdog: recover any note stuck in "processing" for > 45 seconds
+  const staleCutoff = Date.now() - 45_000;
+  await db
+    .update(notes)
+    .set({
+      status: "error",
+      summary:
+        "AI processing timed out. Open the ••• menu and click Re-analyze with AI to try again.",
+      updatedAt: Date.now(),
+    })
+    .where(and(eq(notes.status, "processing"), lt(notes.updatedAt, staleCutoff)));
 
   const [projectRows, spaceRows, noteRows, settingsRows] = await Promise.all([
     db
