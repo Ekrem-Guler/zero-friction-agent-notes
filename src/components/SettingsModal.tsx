@@ -25,6 +25,8 @@ export function SettingsModal({
   const [preferByok, setPreferByok] = useState(settings.preferByok);
   const [geminiKey, setGeminiKey] = useState("");
   const [openaiKey, setOpenaiKey] = useState("");
+  const [hfKey, setHfKey] = useState("");
+  const [hfModel, setHfModel] = useState(settings.hfModel);
   const [monthlyBudget, setMonthlyBudget] = useState(
     String(settings.monthlySystemBudgetUsd)
   );
@@ -34,6 +36,7 @@ export function SettingsModal({
   async function handleSave(extraFlags?: {
     clearGeminiKey?: boolean;
     clearOpenaiKey?: boolean;
+    clearHfKey?: boolean;
   }) {
     setSaving(true);
     setStatusMsg(null);
@@ -47,6 +50,8 @@ export function SettingsModal({
           preferByok,
           geminiApiKey: geminiKey.trim() || undefined,
           openaiApiKey: openaiKey.trim() || undefined,
+          hfApiKey: hfKey.trim() || undefined,
+          hfModel: hfModel.trim() || undefined,
           monthlySystemBudgetUsd: Number(monthlyBudget) || 2.0,
           ...extraFlags,
         }),
@@ -58,6 +63,7 @@ export function SettingsModal({
       if (res.ok && data.settings) {
         setGeminiKey("");
         setOpenaiKey("");
+        setHfKey("");
         onSaved(data.settings);
         setStatusMsg("Settings saved.");
       } else {
@@ -162,45 +168,93 @@ export function SettingsModal({
 
             {!preferByok && !settings.hasSystemKey && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
-                Server built-in key is not configured yet. To enable the free
-                tier for users without an API key, add{" "}
+                Server built-in key is not configured yet. Add{" "}
+                <code className="font-mono font-semibold">HF_TOKEN</code> or{" "}
                 <code className="font-mono font-semibold">
                   GOOGLE_GENERATIVE_AI_API_KEY
                 </code>{" "}
                 to your <code className="font-mono">.env.local</code> (or Vercel
-                env).
+                env) and restart the server.
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-3 gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setActiveProvider("gemini")}
-                className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
+                className={`rounded-xl border px-2.5 py-2 text-left text-xs transition ${
                   activeProvider === "gemini"
                     ? "border-blue-500 bg-blue-50 text-blue-900"
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
                 }`}
               >
-                <div className="font-semibold">Google Gemini</div>
-                <div className="text-[11px] opacity-80">
-                  Web Search + Voice
-                </div>
+                <div className="font-semibold">Gemini</div>
+                <div className="text-[10px] opacity-80">Search + Voice</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveProvider("huggingface")}
+                className={`rounded-xl border px-2.5 py-2 text-left text-xs transition ${
+                  activeProvider === "huggingface"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                <div className="font-semibold">Hugging Face</div>
+                <div className="text-[10px] opacity-80">Open-Source LLM</div>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveProvider("openai")}
-                className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
+                className={`rounded-xl border px-2.5 py-2 text-left text-xs transition ${
                   activeProvider === "openai"
                     ? "border-blue-500 bg-blue-50 text-blue-900"
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
                 }`}
               >
                 <div className="font-semibold">OpenAI</div>
-                <div className="text-[11px] opacity-80">
-                  GPT-4o-mini + Whisper
-                </div>
+                <div className="text-[10px] opacity-80">GPT-4o-mini</div>
               </button>
+            </div>
+
+            {/* Hugging Face Token & Model */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-700 font-medium">
+                  Hugging Face Token (HF_TOKEN)
+                </span>
+                {settings.hasHfByok && (
+                  <span className="flex items-center gap-2 font-mono text-[11px] text-emerald-700">
+                    {settings.maskedHfKey}
+                    <button
+                      type="button"
+                      onClick={() => void handleSave({ clearHfKey: true })}
+                      className="text-rose-600 hover:underline inline-flex items-center gap-0.5"
+                      title="Remove Token"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              <input
+                type="password"
+                value={hfKey}
+                onChange={(e) => setHfKey(e.target.value)}
+                placeholder={
+                  settings.hasHfByok
+                    ? "Enter a new token to replace..."
+                    : "hf_... (optional if HF_TOKEN is set in env)"
+                }
+                className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
+              />
+              <input
+                type="text"
+                value={hfModel}
+                onChange={(e) => setHfModel(e.target.value)}
+                placeholder="Qwen/Qwen2.5-7B-Instruct"
+                className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-1.5 font-mono text-[11px] text-zinc-700 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none"
+              />
             </div>
 
             {/* Gemini Key */}

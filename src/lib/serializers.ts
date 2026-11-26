@@ -55,6 +55,9 @@ export interface ClientSettings {
   maskedGeminiKey: string;
   hasOpenaiByok: boolean;
   maskedOpenaiKey: string;
+  hasHfByok: boolean;
+  maskedHfKey: string;
+  hfModel: string;
   hasSystemKey: boolean;
   monthlySystemBudgetUsd: number;
   passwordProtectionEnabled: boolean;

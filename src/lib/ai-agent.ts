@@ -28,6 +28,9 @@ const GEMINI_FALLBACK_MODELS = Array.from(
   ])
 );
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+const DEFAULT_HF_MODEL =
+  process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-7B-Instruct";
+const HF_ROUTER_BASE_URL = "https://router.huggingface.co/v1";
 export const FREE_MONTHLY_AI_LIMIT = Math.max(
   1,
   Number(process.env.FREE_MONTHLY_AI_LIMIT || "15") || 15
@@ -155,6 +158,7 @@ type StructuredNoteOutput = z.infer<typeof StructuredNoteSchema>;
 interface ResolvedCredentials {
   provider: AIProviderName;
   apiKey: string;
+  hfModel: string;
   usedByok: boolean;
   budgetExceeded: boolean;
   freeQuotaExceeded: boolean;
@@ -199,79 +203,79 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
 
   const preferredProvider: AIProviderName = settings?.activeProvider || "gemini";
   const userContext = settings?.userContext?.trim() || "";
+  const hfModel = settings?.hfModel?.trim() || DEFAULT_HF_MODEL;
   const byokGemini = decryptSecret(settings?.encryptedGeminiKey);
   const byokOpenai = decryptSecret(settings?.encryptedOpenaiKey);
+  const byokHf = decryptSecret(settings?.encryptedHfKey);
   const sysGemini = process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || "";
   const sysOpenai = process.env.OPENAI_API_KEY?.trim() || "";
+  const sysHf =
+    process.env.HF_TOKEN?.trim() ||
+    process.env.HUGGINGFACE_API_KEY?.trim() ||
+    "";
 
   // 1. Prefer BYOK if enabled & available (Unlimited for user, $0 cost risk for platform)
   if (settings?.preferByok !== false) {
-    if (preferredProvider === "gemini" && byokGemini) {
-      return {
-        provider: "gemini",
-        apiKey: byokGemini,
-        usedByok: true,
-        budgetExceeded: false,
-        freeQuotaExceeded: false,
-        userContext,
-      };
-    }
-    if (preferredProvider === "openai" && byokOpenai) {
-      return {
-        provider: "openai",
-        apiKey: byokOpenai,
-        usedByok: true,
-        budgetExceeded: false,
-        freeQuotaExceeded: false,
-        userContext,
-      };
-    }
-    if (byokGemini) {
-      return {
-        provider: "gemini",
-        apiKey: byokGemini,
-        usedByok: true,
-        budgetExceeded: false,
-        freeQuotaExceeded: false,
-        userContext,
-      };
-    }
-    if (byokOpenai) {
-      return {
-        provider: "openai",
-        apiKey: byokOpenai,
-        usedByok: true,
-        budgetExceeded: false,
-        freeQuotaExceeded: false,
-        userContext,
-      };
+    const byokCandidates: Array<{ provider: AIProviderName; key: string }> = [
+      {
+        provider: preferredProvider,
+        key:
+          preferredProvider === "gemini"
+            ? byokGemini
+            : preferredProvider === "openai"
+              ? byokOpenai
+              : byokHf,
+      },
+      { provider: "gemini", key: byokGemini },
+      { provider: "huggingface", key: byokHf },
+      { provider: "openai", key: byokOpenai },
+    ];
+    for (const c of byokCandidates) {
+      if (c.key) {
+        return {
+          provider: c.provider,
+          apiKey: c.key,
+          hfModel,
+          usedByok: true,
+          budgetExceeded: false,
+          freeQuotaExceeded: false,
+          userContext,
+        };
+      }
     }
   }
 
   // 2. Built-in Free Tier (Server System Key with Note Count Limit + Monthly USD Cap)
-  const systemKey =
-    preferredProvider === "gemini"
-      ? sysGemini || sysOpenai
-      : sysOpenai || sysGemini;
-  const resolvedSystemProvider: AIProviderName =
-    preferredProvider === "gemini"
-      ? sysGemini
-        ? "gemini"
-        : "openai"
-      : sysOpenai
-        ? "openai"
-        : "gemini";
+  const systemCandidates: Array<{ provider: AIProviderName; key: string }> = [
+    {
+      provider: preferredProvider,
+      key:
+        preferredProvider === "gemini"
+          ? sysGemini
+          : preferredProvider === "openai"
+            ? sysOpenai
+            : sysHf,
+    },
+    { provider: "huggingface", key: sysHf },
+    { provider: "gemini", key: sysGemini },
+    { provider: "openai", key: sysOpenai },
+  ];
+  const matchedSystem = systemCandidates.find((c) => Boolean(c.key));
 
-  if (!systemKey) {
+  if (!matchedSystem) {
     return {
       provider: preferredProvider,
       apiKey: "",
+      hfModel,
       usedByok: false,
       budgetExceeded: false,
       freeQuotaExceeded: false,
       userContext,
     };
   }
+
+  const resolvedSystemProvider = matchedSystem.provider;
+  const systemKey = matchedSystem.key;
 
   const budgetCap = settings?.monthlySystemBudgetUsd ?? 2.0;
   const { count: freeUsedCount, spendUsd: spentThisMonth } =
@@ -281,6 +285,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
     return {
       provider: resolvedSystemProvider,
       apiKey: "",
+      hfModel,
       usedByok: false,
       budgetExceeded: false,
       freeQuotaExceeded: true,
@@ -292,6 +297,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
     return {
       provider: resolvedSystemProvider,
       apiKey: "",
+      hfModel,
       usedByok: false,
       budgetExceeded: true,
       freeQuotaExceeded: false,
@@ -302,6 +308,7 @@ async function resolveCredentials(): Promise<ResolvedCredentials> {
   return {
     provider: resolvedSystemProvider,
     apiKey: systemKey,
+    hfModel,
     usedByok: false,
     budgetExceeded: false,
     freeQuotaExceeded: false,
@@ -315,9 +322,9 @@ function estimateCostUsd(
   outputTokens: number,
   usedSearch: boolean
 ): number {
-  // Conservative unit-cost estimates (Flash / 4o-mini tier + optional search call)
-  const inRatePerMillion = provider === "gemini" ? 0.15 : 0.15;
-  const outRatePerMillion = provider === "gemini" ? 0.6 : 0.6;
+  // Conservative unit-cost estimates
+  const inRatePerMillion = provider === "huggingface" ? 0.05 : 0.15;
+  const outRatePerMillion = provider === "huggingface" ? 0.15 : 0.6;
   const tokenCost =
     (inputTokens / 1_000_000) * inRatePerMillion +
     (outputTokens / 1_000_000) * outRatePerMillion;
@@ -482,6 +489,31 @@ export async function transcribeVoiceNote(
       usedByok: creds.usedByok,
       providerUsed: modelUsed,
       costUsd: estimateCostUsd("gemini", inTok, outTok, false),
+    };
+  }
+
+  if (creds.provider === "huggingface") {
+    const res = await fetch(
+      "https://router.huggingface.co/hf-inference/models/openai/whisper-large-v3-turbo",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${creds.apiKey}`,
+          "Content-Type": mimeType || "audio/webm",
+        },
+        body: Buffer.from(audioBytes),
+        signal: AbortSignal.timeout(15_000),
+      }
+    );
+    if (!res.ok) {
+      throw new Error(`Hugging Face Whisper error (${res.status}).`);
+    }
+    const data = (await res.json().catch(() => ({}))) as { text?: string };
+    return {
+      transcript: (data.text || "").trim().slice(0, SECURITY_LIMITS.MAX_TEXT_CHARS),
+      usedByok: creds.usedByok,
+      providerUsed: "hf:whisper-large-v3-turbo",
+      costUsd: 0.0005,
     };
   }
 
@@ -660,6 +692,48 @@ CLASSIFICATION RULES:
       modelUsed = used;
       usageIn = result.usage?.inputTokens ?? 0;
       usageOut = result.usage?.outputTokens ?? 0;
+    } else if (creds.provider === "huggingface") {
+      const hf = createOpenAI({
+        apiKey: creds.apiKey,
+        baseURL: HF_ROUTER_BASE_URL,
+      });
+      const hfChatModel = hf.chat(creds.hfModel);
+      modelUsed = `hf:${creds.hfModel}`;
+
+      try {
+        const result = await generateText({
+          model: hfChatModel,
+          output: Output.object({ schema: StructuredNoteSchema }),
+          system: systemPrompt,
+          prompt: userPrompt,
+          abortSignal: AbortSignal.timeout(15_000),
+          maxRetries: 0,
+          maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
+        });
+        parsed = result.output;
+        usageIn = result.usage?.inputTokens ?? 0;
+        usageOut = result.usage?.outputTokens ?? 0;
+      } catch {
+        const jsonInstruction = `${systemPrompt}\n\nRespond with ONLY a valid JSON object matching these exact keys (no markdown fences, no extra text): {"spaceId":"...","intentKind":"task|resource|idea","title":"...","summary":"...","subtasks":[],"dueDate":null,"priority":null,"categoryTag":null,"officialUrl":null,"pricingHint":null,"projectUseCase":null,"nextStep":null,"tags":[],"suggestedNewSpace":null}`;
+        const rawRes = await generateText({
+          model: hfChatModel,
+          system: jsonInstruction,
+          prompt: userPrompt,
+          abortSignal: AbortSignal.timeout(15_000),
+          maxRetries: 0,
+          maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
+        });
+        const cleaned = rawRes.text
+          .trim()
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/```$/i, "")
+          .trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        const rawObj = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+        parsed = StructuredNoteSchema.parse(rawObj);
+        usageIn = rawRes.usage?.inputTokens ?? 0;
+        usageOut = rawRes.usage?.outputTokens ?? 0;
+      }
     } else {
       const openai = createOpenAI({ apiKey: creds.apiKey });
       const result = await generateText({

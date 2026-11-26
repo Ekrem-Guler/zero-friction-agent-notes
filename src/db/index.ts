@@ -139,6 +139,8 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
           prefer_byok INTEGER NOT NULL DEFAULT 1,
           encrypted_gemini_key TEXT NOT NULL DEFAULT '',
           encrypted_openai_key TEXT NOT NULL DEFAULT '',
+          encrypted_hf_key TEXT NOT NULL DEFAULT '',
+          hf_model TEXT NOT NULL DEFAULT 'Qwen/Qwen2.5-7B-Instruct',
           monthly_system_budget_usd REAL NOT NULL DEFAULT 2.0,
           updated_at INTEGER NOT NULL
         );
@@ -160,6 +162,20 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
       }
       try {
         await client.execute(`ALTER TABLE notes ADD COLUMN parent_id TEXT`);
+      } catch {
+        // Column already exists
+      }
+      try {
+        await client.execute(
+          `ALTER TABLE app_settings ADD COLUMN encrypted_hf_key TEXT NOT NULL DEFAULT ''`
+        );
+      } catch {
+        // Column already exists
+      }
+      try {
+        await client.execute(
+          `ALTER TABLE app_settings ADD COLUMN hf_model TEXT NOT NULL DEFAULT 'Qwen/Qwen2.5-7B-Instruct'`
+        );
       } catch {
         // Column already exists
       }

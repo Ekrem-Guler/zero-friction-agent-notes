@@ -70,9 +70,12 @@ export async function GET() {
   const cfg = settingsRows[0];
   const rawGemini = decryptSecret(cfg?.encryptedGeminiKey);
   const rawOpenai = decryptSecret(cfg?.encryptedOpenaiKey);
+  const rawHf = decryptSecret(cfg?.encryptedHfKey);
   const hasSystemKey = Boolean(
     process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
-      process.env.OPENAI_API_KEY?.trim()
+      process.env.OPENAI_API_KEY?.trim() ||
+      process.env.HF_TOKEN?.trim() ||
+      process.env.HUGGINGFACE_API_KEY?.trim()
   );
 
   const settings: ClientSettings = {
@@ -83,6 +86,9 @@ export async function GET() {
     maskedGeminiKey: maskApiKey(rawGemini),
     hasOpenaiByok: Boolean(rawOpenai),
     maskedOpenaiKey: maskApiKey(rawOpenai),
+    hasHfByok: Boolean(rawHf),
+    maskedHfKey: maskApiKey(rawHf),
+    hfModel: cfg?.hfModel || process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-7B-Instruct",
     hasSystemKey,
     monthlySystemBudgetUsd: cfg?.monthlySystemBudgetUsd ?? 2.0,
     passwordProtectionEnabled: isPasswordProtectionEnabled(),

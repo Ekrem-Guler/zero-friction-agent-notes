@@ -3,7 +3,7 @@ import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 export type SpaceKind = "tasks" | "resources" | "ideas" | "custom";
 export type NoteInputType = "text" | "voice";
 export type NoteStatus = "processing" | "completed" | "error";
-export type AIProviderName = "gemini" | "openai";
+export type AIProviderName = "gemini" | "openai" | "huggingface";
 
 export interface SubtaskItem {
   id: string;
@@ -84,6 +84,8 @@ export const appSettings = sqliteTable("app_settings", {
     .default(true),
   encryptedGeminiKey: text("encrypted_gemini_key").notNull().default(""),
   encryptedOpenaiKey: text("encrypted_openai_key").notNull().default(""),
+  encryptedHfKey: text("encrypted_hf_key").notNull().default(""),
+  hfModel: text("hf_model").notNull().default("Qwen/Qwen2.5-7B-Instruct"),
   monthlySystemBudgetUsd: real("monthly_system_budget_usd")
     .notNull()
     .default(2.0),

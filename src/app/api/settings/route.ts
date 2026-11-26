@@ -19,6 +19,9 @@ export async function PUT(request: Request) {
     clearGeminiKey?: boolean;
     openaiApiKey?: string;
     clearOpenaiKey?: boolean;
+    hfApiKey?: string;
+    clearHfKey?: boolean;
+    hfModel?: string;
     monthlySystemBudgetUsd?: number;
   };
 
@@ -43,12 +46,24 @@ export async function PUT(request: Request) {
     nextEncryptedOpenai = encryptSecret(body.openaiApiKey.trim());
   }
 
+  let nextEncryptedHf = current?.encryptedHfKey || "";
+  if (body.clearHfKey) {
+    nextEncryptedHf = "";
+  } else if (body.hfApiKey && body.hfApiKey.trim().length > 0) {
+    nextEncryptedHf = encryptSecret(body.hfApiKey.trim());
+  }
+
+  const nextHfModel =
+    typeof body.hfModel === "string" && body.hfModel.trim().length > 0
+      ? body.hfModel.trim().slice(0, 100)
+      : (current?.hfModel || "Qwen/Qwen2.5-7B-Instruct");
+
   const nextProvider: AIProviderName =
-    body.activeProvider === "openai"
-      ? "openai"
-      : body.activeProvider === "gemini"
-        ? "gemini"
-        : (current?.activeProvider ?? "gemini");
+    body.activeProvider === "openai" ||
+    body.activeProvider === "gemini" ||
+    body.activeProvider === "huggingface"
+      ? body.activeProvider
+      : (current?.activeProvider ?? "gemini");
 
   const nextBudget =
     typeof body.monthlySystemBudgetUsd === "number" &&
@@ -75,6 +90,8 @@ export async function PUT(request: Request) {
       preferByok: nextPreferByok,
       encryptedGeminiKey: nextEncryptedGemini,
       encryptedOpenaiKey: nextEncryptedOpenai,
+      encryptedHfKey: nextEncryptedHf,
+      hfModel: nextHfModel,
       monthlySystemBudgetUsd: nextBudget,
       updatedAt: Date.now(),
     })
@@ -82,9 +99,12 @@ export async function PUT(request: Request) {
 
   const rawGemini = decryptSecret(nextEncryptedGemini);
   const rawOpenai = decryptSecret(nextEncryptedOpenai);
+  const rawHf = decryptSecret(nextEncryptedHf);
   const hasSystemKey = Boolean(
     process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
-      process.env.OPENAI_API_KEY?.trim()
+      process.env.OPENAI_API_KEY?.trim() ||
+      process.env.HF_TOKEN?.trim() ||
+      process.env.HUGGINGFACE_API_KEY?.trim()
   );
 
   const settings: ClientSettings = {
@@ -95,6 +115,9 @@ export async function PUT(request: Request) {
     maskedGeminiKey: maskApiKey(rawGemini),
     hasOpenaiByok: Boolean(rawOpenai),
     maskedOpenaiKey: maskApiKey(rawOpenai),
+    hasHfByok: Boolean(rawHf),
+    maskedHfKey: maskApiKey(rawHf),
+    hfModel: nextHfModel,
     hasSystemKey,
     monthlySystemBudgetUsd: nextBudget,
     passwordProtectionEnabled: isPasswordProtectionEnabled(),

@@ -495,6 +495,7 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
     settings &&
       (settings.hasGeminiByok ||
         settings.hasOpenaiByok ||
+        settings.hasHfByok ||
         settings.hasSystemKey)
   );
   const showCenteredHero =
@@ -1141,8 +1142,16 @@ export function NotesWorkspace({ initialAuthenticated }: NotesWorkspaceProps) {
               <Sparkles className="h-3.5 w-3.5 text-blue-600" />
               <span className="hidden sm:inline">
                 {settings?.preferByok &&
-                (settings.hasGeminiByok || settings.hasOpenaiByok)
-                  ? `${settings.activeProvider === "openai" ? "OpenAI" : "Gemini"} • BYOK`
+                (settings.hasGeminiByok ||
+                  settings.hasOpenaiByok ||
+                  settings.hasHfByok)
+                  ? `${
+                      settings.activeProvider === "openai"
+                        ? "OpenAI"
+                        : settings.activeProvider === "huggingface"
+                          ? "Hugging Face"
+                          : "Gemini"
+                    } • BYOK`
                   : `Free • ${usageStats.freeCreditsRemaining}/${usageStats.freeCreditsLimit}`}
               </span>
             </button>
