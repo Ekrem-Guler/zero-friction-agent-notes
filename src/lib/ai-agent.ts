@@ -22,12 +22,9 @@ const GEMINI_FALLBACK_MODELS = Array.from(
     ...(process.env.GEMINI_MODEL?.trim()
       ? [process.env.GEMINI_MODEL.trim()]
       : []),
+    "gemini-3-flash-preview",
     "gemini-3.8-flash",
-    "gemini-3.7-flash",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash",
   ])
 );
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
@@ -651,9 +648,12 @@ CLASSIFICATION RULES:
             output: Output.object({ schema: StructuredNoteSchema }),
             system: systemPrompt,
             prompt: userPrompt,
-            abortSignal: AbortSignal.timeout(12_000),
+            abortSignal: AbortSignal.timeout(9_000),
             maxRetries: 0,
             maxOutputTokens: SECURITY_LIMITS.MAX_OUTPUT_TOKENS,
+            providerOptions: {
+              google: { thinkingConfig: { thinkingBudget: 0 } },
+            },
           })
       );
       parsed = result.output;
