@@ -3,24 +3,35 @@ import { after, NextResponse } from "next/server";
 import { ensureDbReady } from "@/db";
 import { notes } from "@/db/schema";
 import { isAuthenticated } from "@/lib/auth";
+import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { processAndEnrichNote } from "@/lib/ai-agent";
 import { checkRateLimit, SECURITY_LIMITS } from "@/lib/rate-limit";
 import { serializeNote } from "@/lib/serializers";
 
+export async function OPTIONS(request: Request) {
+  return handleCorsPreflight(request);
+}
+
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await isAuthenticated(request))) {
+    return withCors(
+      request,
+      NextResponse.json({ error: "Unauthorized." }, { status: 401 })
+    );
   }
 
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "owner";
   const rl = checkRateLimit(`notes:${ip}`);
   if (!rl.allowed) {
-    return NextResponse.json(
-      {
-        error: `Rate limit reached (max ${SECURITY_LIMITS.RATE_LIMIT_MAX_REQUESTS} notes/min). Please wait ${rl.retryAfterSeconds}s.`,
-      },
-      { status: 429 }
+    return withCors(
+      request,
+      NextResponse.json(
+        {
+          error: `Rate limit reached (max ${SECURITY_LIMITS.RATE_LIMIT_MAX_REQUESTS} notes/min). Please wait ${rl.retryAfterSeconds}s.`,
+        },
+        { status: 429 }
+      )
     );
   }
 
@@ -34,14 +45,20 @@ export async function POST(request: Request) {
 
   const trimmed = (body.text || "").trim();
   if (!trimmed) {
-    return NextResponse.json({ error: "Note cannot be empty." }, { status: 400 });
+    return withCors(
+      request,
+      NextResponse.json({ error: "Note cannot be empty." }, { status: 400 })
+    );
   }
   if (trimmed.length > SECURITY_LIMITS.MAX_TEXT_CHARS) {
-    return NextResponse.json(
-      {
-        error: `Quick notes are limited to ${SECURITY_LIMITS.MAX_TEXT_CHARS} characters.`,
-      },
-      { status: 400 }
+    return withCors(
+      request,
+      NextResponse.json(
+        {
+          error: `Quick notes are limited to ${SECURITY_LIMITS.MAX_TEXT_CHARS} characters.`,
+        },
+        { status: 400 }
+      )
     );
   }
 
@@ -88,8 +105,11 @@ export async function POST(request: Request) {
     suggestedSpace: null,
   };
 
-  return NextResponse.json(
-    { note: serializeNote(saved as typeof notes.$inferSelect) },
-    { status: 201 }
+  return withCors(
+    request,
+    NextResponse.json(
+      { note: serializeNote(saved as typeof notes.$inferSelect) },
+      { status: 201 }
+    )
   );
 }

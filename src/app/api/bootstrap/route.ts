@@ -3,6 +3,7 @@ import { and, asc, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { ensureDbReady } from "@/db";
 import { appSettings, notes, projects, spaces } from "@/db/schema";
 import { isAuthenticated, isPasswordProtectionEnabled } from "@/lib/auth";
+import { handleCorsPreflight, withCors } from "@/lib/cors";
 import { decryptSecret, maskApiKey } from "@/lib/crypto";
 import {
   FREE_MONTHLY_AI_LIMIT,
@@ -16,9 +17,16 @@ import {
   type UsageStats,
 } from "@/lib/serializers";
 
-export async function GET() {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function OPTIONS(request: Request) {
+  return handleCorsPreflight(request);
+}
+
+export async function GET(request: Request) {
+  if (!(await isAuthenticated(request))) {
+    return withCors(
+      request,
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    );
   }
 
   const db = await ensureDbReady();
@@ -109,11 +117,14 @@ export async function GET() {
     freeCreditsRemaining,
   };
 
-  return NextResponse.json({
-    projects: projectRows.map(serializeProject),
-    spaces: spaceRows.map(serializeSpace),
-    notes: noteRows.map(serializeNote),
-    settings,
-    usageStats,
-  });
+  return withCors(
+    request,
+    NextResponse.json({
+      projects: projectRows.map(serializeProject),
+      spaces: spaceRows.map(serializeSpace),
+      notes: noteRows.map(serializeNote),
+      settings,
+      usageStats,
+    })
+  );
 }

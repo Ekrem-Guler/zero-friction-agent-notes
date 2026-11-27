@@ -27,8 +27,12 @@ export function verifyPassword(input: string): boolean {
   return crypto.timingSafeEqual(a, b);
 }
 
-export async function isAuthenticated(): Promise<boolean> {
+export async function isAuthenticated(request?: Request): Promise<boolean> {
   if (!isPasswordProtectionEnabled()) {
+    return true;
+  }
+  const headerPassword = request?.headers.get("x-zeronote-password");
+  if (headerPassword && verifyPassword(headerPassword)) {
     return true;
   }
   const expected = computeSessionToken(process.env.APP_PASSWORD!);
