@@ -4,6 +4,7 @@ export type SpaceKind = "tasks" | "resources" | "ideas" | "custom";
 export type NoteInputType = "text" | "voice";
 export type NoteStatus = "processing" | "completed" | "error";
 export type AIProviderName = "gemini" | "openai" | "huggingface";
+export type AILanguageMode = "auto" | "tr" | "en";
 
 export interface SubtaskItem {
   id: string;
@@ -79,6 +80,10 @@ export const appSettings = sqliteTable("app_settings", {
     .$type<AIProviderName>()
     .notNull()
     .default("gemini"),
+  aiLanguage: text("ai_language")
+    .$type<AILanguageMode>()
+    .notNull()
+    .default("auto"),
   preferByok: integer("prefer_byok", { mode: "boolean" })
     .notNull()
     .default(true),

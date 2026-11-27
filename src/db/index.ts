@@ -136,6 +136,7 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
           id TEXT PRIMARY KEY,
           user_context TEXT NOT NULL DEFAULT '',
           active_provider TEXT NOT NULL DEFAULT 'gemini',
+          ai_language TEXT NOT NULL DEFAULT 'auto',
           prefer_byok INTEGER NOT NULL DEFAULT 1,
           encrypted_gemini_key TEXT NOT NULL DEFAULT '',
           encrypted_openai_key TEXT NOT NULL DEFAULT '',
@@ -175,6 +176,13 @@ export async function ensureDbReady(): Promise<LibSQLDatabase<typeof schema>> {
       try {
         await client.execute(
           `ALTER TABLE app_settings ADD COLUMN hf_model TEXT NOT NULL DEFAULT 'Qwen/Qwen2.5-7B-Instruct'`
+        );
+      } catch {
+        // Column already exists
+      }
+      try {
+        await client.execute(
+          `ALTER TABLE app_settings ADD COLUMN ai_language TEXT NOT NULL DEFAULT 'auto'`
         );
       } catch {
         // Column already exists

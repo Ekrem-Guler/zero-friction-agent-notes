@@ -1,4 +1,5 @@
 import type {
+  AILanguageMode,
   AIProviderName,
   NoteInputType,
   NoteMetadata,
@@ -50,6 +51,7 @@ export interface ClientNote {
 export interface ClientSettings {
   userContext: string;
   activeProvider: AIProviderName;
+  aiLanguage: AILanguageMode;
   preferByok: boolean;
   hasGeminiByok: boolean;
   maskedGeminiKey: string;

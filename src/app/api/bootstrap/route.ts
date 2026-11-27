@@ -89,6 +89,7 @@ export async function GET(request: Request) {
   const settings: ClientSettings = {
     userContext: cfg?.userContext || "",
     activeProvider: cfg?.activeProvider || "gemini",
+    aiLanguage: cfg?.aiLanguage || "auto",
     preferByok: cfg?.preferByok ?? true,
     hasGeminiByok: Boolean(rawGemini),
     maskedGeminiKey: maskApiKey(rawGemini),

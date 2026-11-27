@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, KeyRound, ShieldCheck, User, Save, Trash2, Loader2 } from "lucide-react";
+import { X, KeyRound, ShieldCheck, User, Save, Trash2, Loader2, Languages } from "lucide-react";
 import type { ClientSettings, UsageStats } from "@/lib/serializers";
-import type { AIProviderName } from "@/db/schema";
+import type { AILanguageMode, AIProviderName } from "@/db/schema";
 
 interface SettingsModalProps {
   settings: ClientSettings;
@@ -21,6 +21,9 @@ export function SettingsModal({
   const [userContext, setUserContext] = useState(settings.userContext);
   const [activeProvider, setActiveProvider] = useState<AIProviderName>(
     settings.activeProvider
+  );
+  const [aiLanguage, setAiLanguage] = useState<AILanguageMode>(
+    settings.aiLanguage || "auto"
   );
   const [preferByok, setPreferByok] = useState(settings.preferByok);
   const [geminiKey, setGeminiKey] = useState("");
@@ -47,6 +50,7 @@ export function SettingsModal({
         body: JSON.stringify({
           userContext,
           activeProvider,
+          aiLanguage,
           preferByok,
           geminiApiKey: geminiKey.trim() || undefined,
           openaiApiKey: openaiKey.trim() || undefined,
@@ -125,6 +129,49 @@ export function SettingsModal({
               placeholder='e.g. "Solo Micro-SaaS founder building with Next.js and TypeScript. Focused on lean growth and developer tools."'
               className="w-full rounded-2xl border border-zinc-200 bg-[#f8f9fa] p-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:bg-white focus:outline-none"
             />
+          </section>
+
+          {/* 1.5 AI Response Language */}
+          <section className="space-y-2">
+            <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-600">
+              <Languages className="h-3.5 w-3.5 text-blue-600" />
+              <span>AI Response Language</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setAiLanguage("auto")}
+                className={`rounded-xl border px-3 py-2 text-center text-xs font-medium transition ${
+                  aiLanguage === "auto"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                Auto-detect
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiLanguage("tr")}
+                className={`rounded-xl border px-3 py-2 text-center text-xs font-medium transition ${
+                  aiLanguage === "tr"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                Türkçe
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiLanguage("en")}
+                className={`rounded-xl border px-3 py-2 text-center text-xs font-medium transition ${
+                  aiLanguage === "en"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                }`}
+              >
+                English
+              </button>
+            </div>
           </section>
 
           {/* 2. Built-in Free Tier vs BYOK Mode */}

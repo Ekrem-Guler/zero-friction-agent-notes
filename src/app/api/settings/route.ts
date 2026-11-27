@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { ensureDbReady } from "@/db";
-import { appSettings, type AIProviderName } from "@/db/schema";
+import { appSettings, type AILanguageMode, type AIProviderName } from "@/db/schema";
 import { isAuthenticated, isPasswordProtectionEnabled } from "@/lib/auth";
 import { decryptSecret, encryptSecret, maskApiKey } from "@/lib/crypto";
 import type { ClientSettings } from "@/lib/serializers";
@@ -14,6 +14,7 @@ export async function PUT(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     userContext?: string;
     activeProvider?: AIProviderName;
+    aiLanguage?: AILanguageMode;
     preferByok?: boolean;
     geminiApiKey?: string;
     clearGeminiKey?: boolean;
@@ -65,6 +66,13 @@ export async function PUT(request: Request) {
       ? body.activeProvider
       : (current?.activeProvider ?? "gemini");
 
+  const nextLanguage: AILanguageMode =
+    body.aiLanguage === "tr" ||
+    body.aiLanguage === "en" ||
+    body.aiLanguage === "auto"
+      ? body.aiLanguage
+      : (current?.aiLanguage ?? "auto");
+
   const nextBudget =
     typeof body.monthlySystemBudgetUsd === "number" &&
     Number.isFinite(body.monthlySystemBudgetUsd) &&
@@ -87,6 +95,7 @@ export async function PUT(request: Request) {
     .set({
       userContext: nextContext,
       activeProvider: nextProvider,
+      aiLanguage: nextLanguage,
       preferByok: nextPreferByok,
       encryptedGeminiKey: nextEncryptedGemini,
       encryptedOpenaiKey: nextEncryptedOpenai,
@@ -110,6 +119,7 @@ export async function PUT(request: Request) {
   const settings: ClientSettings = {
     userContext: nextContext,
     activeProvider: nextProvider,
+    aiLanguage: nextLanguage,
     preferByok: nextPreferByok,
     hasGeminiByok: Boolean(rawGemini),
     maskedGeminiKey: maskApiKey(rawGemini),
